@@ -1,0 +1,168 @@
+@font-face {
+  font-family: 'Roboto Mono Variable';
+  src: url('/fonts/roboto-mono-latin-wght-normal.woff2') format('woff2');
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Roboto Mono Fallback';
+  src: local('Courier New'), local('Menlo');
+  size-adjust: 100%;
+  ascent-override: 104.79%;
+  descent-override: 27.1%;
+  line-gap-override: 0%;
+}
+
+:root {
+  color-scheme: dark;
+
+  --kurio-ink: #140d0a;
+  --kurio-surface: #241612;
+  --kurio-surface-raised: #2f1d15;
+  --kurio-surface-dark: #38220f;
+  --kurio-line: #3f2319;
+  --kurio-line-soft: #55321f;
+  --kurio-field: #8a6648;
+  --kurio-foreground: #f5f1eb;
+  --kurio-heading: #f7f3ec;
+  --kurio-body: #cfb28c;
+  --kurio-muted: #b39463;
+  --kurio-highlight: #e89b55;
+  --kurio-primary: #d28a4c;
+  --kurio-coral: #f0805f;
+  --kurio-amber: #e3a44e;
+  --kurio-success: #00a66c;
+
+  --background: var(--kurio-ink);
+  --foreground: var(--kurio-foreground);
+  --card: var(--kurio-surface);
+  --card-foreground: var(--kurio-foreground);
+  --popover: var(--kurio-surface-raised);
+  --popover-foreground: var(--kurio-foreground);
+  --primary: var(--kurio-primary);
+  --primary-foreground: var(--kurio-ink);
+  --secondary: var(--kurio-surface-raised);
+  --secondary-foreground: var(--kurio-foreground);
+  --muted: var(--kurio-surface-dark);
+  --muted-foreground: var(--kurio-muted);
+  --accent: var(--kurio-surface-raised);
+  --accent-foreground: var(--kurio-highlight);
+  --destructive: var(--kurio-coral);
+  --border: var(--kurio-line);
+  --input: var(--kurio-field);
+  --ring: var(--kurio-primary);
+  --radius: 6px;
+}
+
+@theme inline {
+  --font-sans: 'Roboto Mono Variable', 'Roboto Mono Fallback', ui-monospace, monospace;
+  --font-mono: 'Roboto Mono Variable', 'Roboto Mono Fallback', ui-monospace, monospace;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ink: var(--kurio-ink);
+  --color-surface: var(--kurio-surface);
+  --color-surface-raised: var(--kurio-surface-raised);
+  --color-surface-dark: var(--kurio-surface-dark);
+  --color-line: var(--kurio-line);
+  --color-line-soft: var(--kurio-line-soft);
+  --color-field: var(--kurio-field);
+  --color-heading: var(--kurio-heading);
+  --color-body: var(--kurio-body);
+  --color-highlight: var(--kurio-highlight);
+  --color-coral: var(--kurio-coral);
+  --color-amber: var(--kurio-amber);
+  --color-success: var(--kurio-success);
+
+  --radius-field: 3px;
+  --radius-pagination: 4px;
+  --radius-auth: 5px;
+  --radius-btn: 6px;
+  --radius-card: 8px;
+  --radius-mobile-field: 10px;
+  --radius-thumb: 13px;
+  --radius-mobile-card: 14px;
+  --radius-media: 15px;
+  --radius-hero: 24px;
+  --radius-pill: 40px;
+
+  --shadow-field: 0 0 10px rgb(10 6 4 / 0.45);
+  --shadow-stepper: 0 4px 6px rgb(20 13 10 / 0.15);
+  --shadow-card-m: 0 6px 20px rgb(10 6 4 / 0.45);
+  --shadow-sheet: 0 -6px 20px rgb(10 6 4 / 0.45);
+}
+
+@utility bg-banner {
+  background-image: linear-gradient(to bottom, rgb(210 138 76 / 0.1), rgb(210 138 76 / 0.03));
+}
+@utility bg-card-m {
+  background-image: linear-gradient(139.5deg, #241612 12%, #2f1d15 106.6%);
+}
+@utility bg-cta {
+  background-image: linear-gradient(108deg, #d28a4c 4%, rgb(210 138 76 / 0.8) 122%);
+}
+@utility bg-filter {
+  background-image: linear-gradient(137deg, rgb(210 138 76 / 0.45) 24.6%, #d28a4c 100%);
+}
+@utility bg-orb {
+  background-image: linear-gradient(145deg, rgb(210 138 76 / 0.3) 46%, transparent 103%);
+}
+
+@layer base {
+  html {
+    background-color: var(--kurio-ink);
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--kurio-primary);
+    outline-offset: 2px;
+  }
+  ::placeholder {
+    color: var(--kurio-muted);
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@utility animate-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    var(--kurio-surface) 0%,
+    var(--kurio-surface-raised) 50%,
+    var(--kurio-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite linear;
+}
