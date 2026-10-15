@@ -22,7 +22,7 @@ npm run assets
 
 ## Variáveis de ambiente
 
-O arquivo `.env` está versionado com os valores padrão de execução local e de demonstração:
+O arquivo `.env` está **intencionalmente versionado** no repositório porque contém apenas constantes públicas da camada de simulação (nenhum segredo ou chave de API). Isso garante que um checkout limpo (`npm ci && npm run ci`) e o deploy na Vercel funcionem imediatamente com os mocks e o WebSocket simulados ativos, sem exigir cópia manual de arquivos ou configuração de painel. Sobrescritas locais devem usar `.env.local` (ignorado no `.gitignore`).
 
 | Variável                     | Padrão                           | Função                                                                               |
 | ---------------------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
