@@ -352,6 +352,7 @@ export const copy = {
     emptyCatalogTitle: 'Nenhum NFT encontrado',
     emptyCatalogSubtitle: 'Ajuste os filtros ou limpe a busca.',
     routeErrorTitle: 'Algo deu errado',
+    routeErrorFallback: 'Não foi possível carregar esta página.',
     retry: 'Tentar novamente',
     notFoundTitle: 'Página não encontrada',
     backToHome: 'Voltar ao início',
