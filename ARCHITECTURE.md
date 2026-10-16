@@ -286,6 +286,14 @@ A mutation tem `scope: { id: 'favorite:<nftId>' }`. O `onMutate` de cada clique 
 - Reconexão: no `connect` que sucede uma queda, invalido as consultas de NFTs, carrinho, cotação e pedidos do usuário. Só as ativas refazem a requisição; as outras ficam marcadas como velhas. É o REST que recupera o que mudou enquanto nenhum evento chegava. Se a resposta trouxer a mesma `version` que um evento atrasado, o ledger já barra o evento.
 - `useRealtimeStatus` expõe o estado da conexão (`idle`, `connected`, `disconnected`) para quem precisa de polling de reserva enquanto o socket está fora.
 
+### Pedido: REST e `order.updated` em qualquer ordem
+
+- `POST /orders` e `GET /orders/:id` registram a `version` do pedido no ledger. A resposta do `POST` só entra no cache se a versão dela não for menor que a conhecida: no cenário `order-timeout`, o `order.updated` de confirmação chega antes da resposta, e semear o cache com o `pending` dela deixaria a tela parada num estado que o ledger já não deixa nenhum evento corrigir. Nesse caso a página do pedido busca o estado atual.
+- `applyOrderUpdated` só atualiza um pedido que já está no cache e, em estado terminal, apaga a tentativa de checkout guardada e invalida o carrinho (o servidor já tirou as linhas compradas).
+- Uma confirmação que chega com o comprador ainda em `/checkout` (resposta lenta ou reenviada) leva à página do pedido, uma vez por versão (`markSideEffectOnce`).
+- Com o pedido `pending` e o socket fora (`useRealtimeStatus` diferente de `connected`), a consulta do pedido faz polling a cada 2 s. Na reconexão, a reconciliação invalida os pedidos do usuário. Os dois caminhos chegam ao mesmo estado, porque ambos leem o REST.
+- A página do pedido renderiza o recibo só quando o status vindo da API (ou do evento) é `confirmed`, e só a partir de `receipt`, nunca do catálogo.
+
 ### Cotação revisada no pagamento
 
 O `/checkout` mostra e confirma a cotação que o comprador revisou, guardada em estado local por `useReviewedQuote` (`src/features/checkout/queries.ts`); a consulta de cotação continua sendo a de `qk.quote(dono, rede, versão do carrinho)`.
@@ -304,6 +312,15 @@ O `/checkout` mostra e confirma a cotação que o comprador revisou, guardada em
 A repetição é conferida antes de qualquer outra regra, por isso o reenvio depois de um timeout recupera o pedido mesmo que a conexão da carteira já tenha caído. Para um pedido novo, o servidor revalida só as linhas cotadas: conexão ativa e do mesmo usuário (`409 WALLET_DISCONNECTED`), validade de 10 min, rede da conexão igual à da cotação, cupom igual ao do carrinho e ainda válido, taxa da rede, presença no carrinho com a quantidade cotada, estoque (`409 AVAILABILITY_CONFLICT`) e preço e `version` de cada NFT. Qualquer divergência que não seja de estoque responde `409 QUOTE_OUTDATED` com a cotação nova em `details.quote`. Item extra no carrinho não invalida a cotação.
 
 O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópia gravada uma vez, que o catálogo não altera depois.
+
+### No cliente (`src/features/orders`)
+
+- `checkoutAttemptFor` grava `{ key, quoteId, bodyHash }` em `localStorage`, na chave `checkout-attempt:<userId>`, antes do primeiro envio. `bodyHash` é o SHA-256 de `{ quoteId, connectionId, buyer }`: o mesmo corpo reaproveita a chave, e só um corpo diferente (cotação nova, outra conexão, outro comprador) ganha uma chave nova.
+- `placeOrder` envia e, se a resposta se perder (`timeout` ou `network`), reenvia o mesmo corpo com a mesma chave até 3 vezes, mostrando "Verificando seu pedido…". Depois do último reenvio, procura em `GET /orders?status=pending` o pedido com o `quoteId` da tentativa. Uma resposta do servidor (409, 422) nunca é reenviada.
+- O botão ignora o segundo clique enquanto o primeiro está em voo (uma `ref`, não só o estado visual) e mostra "Processando…".
+- Respostas tratadas: `QUOTE_OUTDATED` marca a cotação revisada como recusada e oferece a cotação de `details.quote` (ou a próxima que chegar) para revisão; a confirmação seguinte leva corpo novo e, portanto, chave nova. `AVAILABILITY_CONFLICT` refaz carrinho e cotação, e o botão aponta de volta para o carrinho. `WALLET_DISCONNECTED` deixa a opção em "Desconectada · Reconectar".
+- Ao abrir `/checkout`, se existe tentativa guardada, a tela consulta os pedidos pendentes; achando o da tentativa, vai para ele. Assim, um refresh ou uma reconexão no meio da compra cai no mesmo pedido em vez de comprar de novo.
+- O estado terminal (por evento ou pela leitura REST na página do pedido) apaga a tentativa. "Tentar de novo" depois de uma recusa abre o checkout, que pede cotação nova.
 
 ### Antes do envio, no cliente
 
@@ -373,6 +390,7 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 
 | Tela / Elemento                                  | No Figma                                                        | Na implementação                                                                                                                                     | Motivo                                                                                               |
 | ------------------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Recibo: ilustração "THANK YOU"                   | Ilustração de 80 px de altura                                   | Texto "THANK YOU" em `text-[32px] font-bold text-primary`, `aria-hidden`, na mesma área: o arquivo da ilustração não foi exportado do Figma          |
 | Borda de inputs, selects e textareas             | `#3F2319` (contraste 1,3:1 sobre `#241612`)                     | Token `--kurio-field` (`#8A6648`, contraste 3,4:1 sobre `#241612`)                                                                                   | Atender ao contraste mínimo de 3:1 para componentes de formulário (WCAG 1.4.11)                      |
 | Botão "Aplicar" do cupom mobile                  | Texto claro sobre gradiente (2,5:1)                             | Fundo sólido `bg-primary` (`#D28A4C`) com texto `text-ink` (`#140D0A`, 6,85:1)                                                                       | Garantir contraste superior a 4,5:1                                                                  |
 | Rodapé desktop                                   | Faixas com 250, 88 e 236 px de altura fixa; medalhões de 204 px | Alturas viram mínimas e, entre 1024 e 1279 px, a faixa 3 vira grade de 4 colunas e a newsletter encolhe até 280 px                                   | O texto real em Roboto Mono não cabe nos 250 px e vazava para a faixa seguinte, inclusive em 1440 px |

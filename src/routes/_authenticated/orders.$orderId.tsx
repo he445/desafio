@@ -3,23 +3,27 @@ import { copy } from '@/content/copy'
 import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { MobileTopBar } from '@/components/layout/mobile-top-bar'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { OrderView } from '@/features/orders/components/order-view'
 import { useIsDesktop } from '@/lib/use-media-query'
 
 function OrderDetailPage() {
   const { orderId } = Route.useParams()
   const isDesktop = useIsDesktop()
 
-  return (
-    <section className="space-y-6">
-      {isDesktop ? (
-        <>
-          <Breadcrumb current={copy.order.breadcrumb} />
-          <h1 className="text-xl font-bold text-heading">{copy.order.breadcrumb}</h1>
-        </>
-      ) : (
+  if (!isDesktop) {
+    return (
+      <section className="flex min-h-dvh flex-col">
         <MobileTopBar title={copy.order.breadcrumb} />
-      )}
-      <p className="text-sm text-body">{orderId}</p>
+        <OrderView orderId={orderId} variant="mobile" />
+      </section>
+    )
+  }
+
+  return (
+    <section>
+      <Breadcrumb current={copy.order.breadcrumb} />
+      <h1 className="sr-only">{copy.order.breadcrumb}</h1>
+      <OrderView orderId={orderId} variant="desktop" />
     </section>
   )
 }
