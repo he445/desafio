@@ -105,9 +105,30 @@ O servidor simulado em `src/mocks/realtime/server.ts` publica eventos tipados (`
 - **Keep-alive manual:** o `@mswjs/socket.io-binding` 0.2.0 envia `pingInterval: 25000` e `pingTimeout: 5000` no handshake, mas não dispara pacotes de ping sozinho. O servidor simulado envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no evento `close`, impedindo desconexões por ping timeout aos 30 s.
 - **Identificação do usuário no socket:** como o binding confirma o pacote CONNECT antes de expor o payload de autenticação, o mock inspeciona a mensagem Engine.IO/Socket.IO iniciada por `40{...}` para extrair o token e associar a conexão ao `userId`.
 
-## 5. Política de sessão
+## 5. Rotas, proteção e política de sessão
 
-Sessões são representadas por tokens opacos (`kurio-tok-...`) validados pelo servidor simulado a cada requisição privada. No cenário `session-expired`, o TTL é reduzido para 60 s. Quando o interceptor do Axios recebe `401 SESSION_EXPIRED`, emite o evento `session:expired` para que a camada de autenticação salve a rota atual e redirecione para `/login` preservando o contexto.
+### Árvore de rotas e proteção (`src/routes/*`)
+
+| Rota | Arquivo | Acesso | Comportamento no `beforeLoad` / `loader` |
+| --- | --- | --- | --- |
+| `__root` | `src/routes/__root.tsx` | Público | Resolve `sessionQueryOptions()` via `ensureQueryData`, renderiza `SiteHeader` (desktop), `SiteFooter`, `MobileTabBar` (mobile), `Announcer`, `Toaster` e `ScenarioPanel` |
+| `/` | `src/routes/index.tsx` | Público | Valida search params com `CatalogSearchSchema` (`.catch()` em cada campo) e remove valores padrão da URL via `stripSearchParams` |
+| `/nft/$nftId` | `src/routes/nft.$nftId.tsx` | Público | Valida `?edition=`; 404 da API dispara `notFound()` com tela dedicada ("NFT não encontrado") |
+| `/cart` | `src/routes/cart.tsx` | Público | Funciona tanto para visitante (`X-Guest-Cart-Id`) quanto para usuário autenticado |
+| `/login`, `/register` | `src/routes/login.tsx`, `src/routes/register.tsx` | Visitante | Se já houver sessão ativa, redireciona para `search.redirect` (validado contra open redirect: deve começar com `/` e não com `//`) ou `/` |
+| `/_authenticated` | `src/routes/_authenticated.tsx` | Privado | Sem sessão válida, lança `redirect({ to: '/login', search: { redirect: location.href } })` |
+| `/checkout` | `src/routes/_authenticated/checkout.tsx` | Privado | Protegida pelo layout `_authenticated` |
+| `/orders/$orderId` | `src/routes/_authenticated/orders.$orderId.tsx` | Privado (dono) | Protegida por sessão e validada no servidor pelo `userId` do pedido (`403 FORBIDDEN` para outro usuário) |
+| `/profile`, `/wallets`, `/favorites` | `src/routes/_authenticated/{profile,wallets,favorites}.tsx` | Privado | Compartilham a `AccountSidebar` (310 px no desktop e barra de pílulas no mobile) |
+
+### Política de sessão e expiração com retomada
+
+Sessões são representadas por tokens opacos (`kurio-tok-...`) validados pelo servidor simulado em `GET /api/v1/auth/session` durante o boot e a cada requisição privada. No cenário `session-expired`, o TTL é reduzido para 60 s. Quando o interceptor do Axios recebe `401 SESSION_EXPIRED`:
+
+1. Emite o evento `session:expired` (`src/lib/http.ts`), desacoplado do router para evitar dependência circular.
+2. O listener em `src/routes/__root.tsx` grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado (`['user']`, `['cart']`, `['quote']`), zera `['session']` e navega para `/login?redirect=<href>&reason=expired`.
+3. O evento `storage` na chave `nftmkt:session` sincroniza login e logout entre abas abertas.
+4. _Trade-off documentado:_ em produção com backend dedicado, o token de sessão viveria num cookie `httpOnly; Secure; SameSite=Lax` com rotação de refresh token. Como o Service Worker do MSW no navegador não intercepta nem impõe a flag `httpOnly` em cookies de documento, `localStorage` foi adotado conscientemente na simulação.
 
 ## 6. Estado do carrinho e precisão em ETH
 
@@ -117,9 +138,11 @@ Sessões são representadas por tokens opacos (`kurio-tok-...`) validados pelo s
 
 ## 7. Estratégia de cache, retries e sincronização
 
+As chaves do TanStack Query são centralizadas em `src/lib/query-keys.ts` (`qk`). Dados privados ficam sempre aninhados sob `['user', userId, ...]`, garantindo isolamento estrutural entre contas: no logout ou na troca de usuário, `removeQueries({ queryKey: ['user'] })`, `removeQueries({ queryKey: ['cart'] })` e `removeQueries({ queryKey: ['quote'] })` eliminam imediatamente qualquer dado do usuário anterior.
+
 Configuração base do `QueryClient` em `src/app/query-client.ts`:
 
-- `staleTime` padrão de 30 s.
+- `staleTime` padrão de 30 s (`Infinity` para `session`, `0` para `cart`, `quote` e `pendingOrders`, `60 s` para `featured`, `favorites`, `profile` e `wallets`).
 - Retries limitados a 2 tentativas apenas quando `ApiError.retryable === true` (erros de rede, timeout, HTTP 429, 500 e 503), com backoff exponencial `min(500 * 2^attempt, 4000)` ms.
 - Mutations não executam retry automático.
 

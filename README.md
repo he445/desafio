@@ -2,6 +2,10 @@
 
 Implementação do marketplace de NFTs **Kurio** em React 19 e TypeScript 6, com roteamento tipado via TanStack Router, gerenciamento de estado assíncrono via TanStack Query, cliente HTTP Axios, atualizações em tempo real via Socket.IO e backend simulado no navegador com MSW 2.
 
+- **Demonstração publicada (Vercel):** [https://desafio-rosy-kappa.vercel.app](https://desafio-rosy-kappa.vercel.app)
+- **Repositório:** [https://github.com/he445/desafio](https://github.com/he445/desafio)
+- **Documentação de arquitetura:** [ARCHITECTURE.md](./ARCHITECTURE.md)
+
 ## Requisitos
 
 - Node.js `24.x` (fixado em `.nvmrc` e `package.json#engines`)
@@ -98,6 +102,18 @@ A seleção de cenário pode ser feita de três formas:
 | `npm run lighthouse`         | `node scripts/lighthouse.mjs`                                                                 | Auditoria Lighthouse (3 execuções por página e perfil)                                       |
 | `npm run assets`             | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF/WebP dos NFTs                                   |
 | `npm run ci`                 | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | Pipeline completo executado no GitHub Actions                                                |
+
+## Rotas da aplicação
+
+| Rota | Tela | Acesso |
+| --- | --- | --- |
+| `/` | Início (hero, destaques, filtros, catálogo paginado, promoções e blog) | Público |
+| `/nft/$nftId` | Detalhe do NFT (`?edition=<id>` opcional) | Público |
+| `/cart` | Carrinho de NFTs e resumo da carteira | Público |
+| `/login`, `/register` | Autenticação e criação de conta | Visitante (redireciona usuários já autenticados) |
+| `/checkout` | Pagamento com carteira e revisão da cotação | Privado (redireciona para `/login?redirect=/checkout`) |
+| `/orders/$orderId` | Estado do pedido (`pending`, `confirmed` com recibo ou `rejected`) | Privado (restrito ao dono do pedido) |
+| `/profile`, `/wallets`, `/favorites` | Dados do perfil, carteiras e lista de interesse | Privado |
 
 ## Arquitetura e decisões técnicas
 

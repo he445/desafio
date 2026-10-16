@@ -247,6 +247,7 @@ export const copy = {
     emptyCta: 'Explorar NFTs',
   },
   checkout: {
+    breadcrumb: 'Pagamento',
     titleMobile: 'Pagamento com carteira',
     collectorProfile: 'Perfil do colecionador',
     displayName: 'Nome de exibição',
@@ -280,6 +281,7 @@ export const copy = {
     reviewNewQuote: 'Revisar nova cotação',
   },
   order: {
+    breadcrumb: 'Pedido',
     confirmedHeadline: 'Seus NFTs agora estão na sua carteira',
     txId: 'ID da transação',
     date: 'Data',

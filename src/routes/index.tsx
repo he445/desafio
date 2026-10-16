@@ -1,6 +1,8 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, stripSearchParams } from '@tanstack/react-router'
+import { CatalogSearchSchema, DEFAULT_CATALOG_SEARCH } from '@/contracts'
 import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
+import { RouteErrorBoundary } from '@/components/layout/route-error'
 
 function HomePage() {
   return (
@@ -22,8 +24,16 @@ function HomePage() {
 }
 
 export const Route = createFileRoute('/')({
+  validateSearch: CatalogSearchSchema,
+  search: {
+    middlewares: [stripSearchParams(DEFAULT_CATALOG_SEARCH)],
+  },
   head: () => ({
-    meta: [{ title: copy.meta.pageTitle(copy.nav.home) }],
+    meta: [
+      { title: copy.meta.pageTitle(copy.nav.home) },
+      { name: 'description', content: copy.meta.description },
+    ],
   }),
   component: HomePage,
+  errorComponent: RouteErrorBoundary,
 })

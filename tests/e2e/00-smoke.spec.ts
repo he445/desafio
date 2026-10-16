@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 
-test.describe('Foundation & Simulated Server', () => {
+test.describe('Foundation, Simulated Server & App Shell', () => {
   test('boots MSW before rendering and supports direct navigation and refresh on /cart', async ({
     page,
   }) => {
@@ -16,6 +16,21 @@ test.describe('Foundation & Simulated Server', () => {
     await page.reload()
     await expect(page.locator('html')).toHaveAttribute('data-mocks', 'ready')
     await expect(page.getByRole('heading', { name: 'Carrinho de NFTs' })).toBeVisible()
+  })
+
+  test('resolves public routes, 404 page, and protects private routes with redirect', async ({
+    page,
+  }) => {
+    await page.goto('/nft/emerald-ape-042')
+    await expect(page.getByRole('heading', { name: /emerald-ape-042|Emerald Ape/i })).toBeVisible()
+
+    await page.goto('/rota-que-nao-existe')
+    await expect(page.getByRole('heading', { name: 'Página não encontrada' })).toBeVisible()
+
+    // Unauthenticated access to private route redirects to /login?redirect=/profile
+    await page.goto('/profile')
+    await expect(page).toHaveURL(/\/login\?redirect=%2Fprofile/)
+    await expect(page.getByRole('heading', { name: 'Entrar' })).toBeVisible()
   })
 
   test('intercepts all REST endpoints via MSW Service Worker and validates contracts', async ({
