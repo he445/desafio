@@ -1,26 +1,23 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
-import { MobilePageTopBar } from '@/components/layout/account-sidebar'
+import { Breadcrumb } from '@/components/layout/breadcrumb'
+import { MobileTopBar } from '@/components/layout/mobile-top-bar'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { useIsDesktop } from '@/lib/use-media-query'
 
 function CartPage() {
+  const isDesktop = useIsDesktop()
+
   return (
     <section className="space-y-6">
-      <MobilePageTopBar title={copy.cart.titleMobile} />
-      <nav
-        aria-label={copy.a11y.breadcrumb}
-        className="hidden text-[15px] font-bold text-body lg:block"
-      >
-        <Link to="/" className="hover:text-highlight">
-          {copy.nav.home}
-        </Link>{' '}
-        /{' '}
-        <Link to="/" hash="mercado" className="hover:text-highlight">
-          {copy.nav.market}
-        </Link>{' '}
-        / <span aria-current="page">{copy.nav.cart}</span>
-      </nav>
-      <h1 className="hidden text-xl font-bold text-heading lg:block">{copy.cart.titleMobile}</h1>
+      {isDesktop ? (
+        <>
+          <Breadcrumb current={copy.nav.cart} />
+          <h1 className="text-xl font-bold text-heading">{copy.cart.titleMobile}</h1>
+        </>
+      ) : (
+        <MobileTopBar title={copy.cart.titleMobile} />
+      )}
     </section>
   )
 }

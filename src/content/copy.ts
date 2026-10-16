@@ -28,7 +28,10 @@ export const copy = {
   },
   a11y: {
     primaryNav: 'Principal',
+    bottomNav: 'Navegação inferior',
+    accountNav: 'Menu da conta',
     breadcrumb: 'Trilha de navegação',
+    back: 'Voltar',
     close: 'Fechar',
   },
   footer: {

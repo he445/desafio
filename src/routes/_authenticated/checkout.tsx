@@ -1,28 +1,24 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
-import { MobilePageTopBar } from '@/components/layout/account-sidebar'
+import { Breadcrumb } from '@/components/layout/breadcrumb'
+import { MobileTopBar } from '@/components/layout/mobile-top-bar'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { useIsDesktop } from '@/lib/use-media-query'
 
 function CheckoutPage() {
+  const isDesktop = useIsDesktop()
+
   return (
     <section className="space-y-6">
-      <MobilePageTopBar title={copy.checkout.titleMobile} />
-      <nav
-        aria-label={copy.a11y.breadcrumb}
-        className="hidden text-[15px] font-bold text-body lg:block"
-      >
-        <Link to="/" className="hover:text-highlight">
-          {copy.nav.home}
-        </Link>{' '}
-        /{' '}
-        <Link to="/" hash="mercado" className="hover:text-highlight">
-          {copy.nav.market}
-        </Link>{' '}
-        / <span aria-current="page">{copy.checkout.breadcrumb}</span>
-      </nav>
-      <h1 className="hidden text-[17px] font-bold text-heading lg:block">
-        {copy.checkout.collectorProfile}
-      </h1>
+      {isDesktop ? (
+        <>
+          <Breadcrumb current={copy.checkout.breadcrumb} />
+          <h1 className="sr-only">{copy.checkout.breadcrumb}</h1>
+        </>
+      ) : (
+        <MobileTopBar title={copy.checkout.titleMobile} />
+      )}
+      <h2 className="text-[17px] font-bold text-heading">{copy.checkout.collectorProfile}</h2>
     </section>
   )
 }
