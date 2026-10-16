@@ -5,7 +5,7 @@ import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
 import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
-import { nftQueryOptions } from '@/features/nfts/queries'
+import { nftQueryOptions } from '@/features/nft/queries'
 import { isApiError } from '@/lib/api-error'
 import { useIsDesktop } from '@/lib/use-media-query'
 
