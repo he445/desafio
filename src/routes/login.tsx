@@ -1,26 +1,12 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { AuthScreen } from '@/features/auth/components/auth-screen'
 import { LoginSearchSchema } from '@/features/auth/search'
 
 function LoginPage() {
-  const { reason } = Route.useSearch()
-
-  return (
-    <section className="mx-auto max-w-[500px] space-y-6 py-8">
-      <h1 className="text-xl font-bold text-heading">{copy.auth.signIn}</h1>
-      {reason === 'expired' && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="rounded-field border border-coral p-3 text-sm text-coral"
-        >
-          {copy.auth.sessionExpiredBanner}
-        </div>
-      )}
-      <p className="text-sm text-body">{copy.auth.signInSubtitle}</p>
-    </section>
-  )
+  const { redirect, reason } = Route.useSearch()
+  return <AuthScreen mode="login" redirect={redirect} expired={reason === 'expired'} />
 }
 
 export const Route = createFileRoute('/login')({

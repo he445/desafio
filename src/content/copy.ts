@@ -370,6 +370,20 @@ export const copy = {
     alreadyHaveAccount: 'Já tem uma conta?',
     signInLink: 'Entre',
     sessionExpiredBanner: 'Sua sessão expirou. Entre novamente para continuar.',
+    emailLabel: 'E-mail',
+    passwordLabel: 'Senha',
+    usernameLabel: 'Nome de usuário',
+    confirmPasswordLabel: 'Confirmar senha',
+    showPassword: 'Mostrar senha',
+    hidePassword: 'Ocultar senha',
+    processing: 'Processando…',
+    formErrorTitle: 'Não foi possível entrar',
+    registerErrorTitle: 'Não foi possível criar a conta',
+    reviewFields: 'Revise os campos destacados.',
+    cartAdjusted: (title: string, quantity: number) =>
+      quantity === 0
+        ? `${title} saiu do carrinho: a edição esgotou.`
+        : `${title}: quantidade ajustada para ${quantity} pelo estoque disponível.`,
   },
   account: {
     sidebarTitle: 'Meu perfil',

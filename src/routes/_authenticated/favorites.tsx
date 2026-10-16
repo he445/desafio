@@ -42,7 +42,7 @@ function FavoritesContent() {
   }
   return (
     <div aria-busy={isFetching || undefined}>
-      <NftGrid items={data.items} />
+      <NftGrid items={data.items} label={copy.account.favorites} />
     </div>
   )
 }

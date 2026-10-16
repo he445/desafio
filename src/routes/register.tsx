@@ -1,15 +1,12 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { AuthScreen } from '@/features/auth/components/auth-screen'
 import { RegisterSearchSchema } from '@/features/auth/search'
 
 function RegisterPage() {
-  return (
-    <section className="mx-auto max-w-[500px] space-y-6 py-8">
-      <h1 className="text-xl font-bold text-heading">{copy.auth.createAccount}</h1>
-      <p className="text-sm text-body">{copy.auth.registerSubtitle}</p>
-    </section>
-  )
+  const { redirect } = Route.useSearch()
+  return <AuthScreen mode="register" redirect={redirect} />
 }
 
 export const Route = createFileRoute('/register')({

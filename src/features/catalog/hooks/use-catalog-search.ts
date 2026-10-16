@@ -1,10 +1,11 @@
 import { useCallback } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import type { CatalogSearch } from '@/contracts'
+import { DEFAULT_CATALOG_SEARCH, type CatalogSearch } from '@/contracts'
 import { applyCatalogChange, toPage, type CatalogChange } from '../search'
 
+// The home page is also rendered behind the login dialog, where the URL holds no catalog search.
 export function useCatalogSearch(): CatalogSearch {
-  return useSearch({ from: '/' })
+  return useSearch({ from: '/', shouldThrow: false }) ?? DEFAULT_CATALOG_SEARCH
 }
 
 interface CatalogNavigateOptions {

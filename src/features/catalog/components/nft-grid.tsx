@@ -5,12 +5,20 @@ import { gridClassName, staggerClassName } from '../grid-layout'
 import { useGridColumns } from '../hooks/use-grid-columns'
 import { NftCard } from './nft-card'
 
-export function NftGrid({ items, dimmed = false }: { items: Nft[]; dimmed?: boolean }) {
+export function NftGrid({
+  items,
+  dimmed = false,
+  label = copy.catalog.gridLabel,
+}: {
+  items: Nft[]
+  dimmed?: boolean
+  label?: string
+}) {
   const { columns, isDesktop } = useGridColumns()
 
   return (
     <ul
-      aria-label={copy.catalog.gridLabel}
+      aria-label={label}
       className={cn(gridClassName(columns), dimmed && 'opacity-60 transition-opacity')}
     >
       {items.map((nft, index) => (
