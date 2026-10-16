@@ -2,6 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
 import { AccountLayout } from '@/components/layout/account-layout'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { ProfileView } from '@/features/account/components/profile-view'
 import { useSignOut } from '@/features/auth/hooks/use-sign-out'
 
 function ProfilePage() {
@@ -13,7 +14,7 @@ function ProfilePage() {
       title={copy.account.sidebarTitle}
       onSignOut={() => void signOut()}
     >
-      <h2 className="text-base font-bold text-heading">{copy.checkout.collectorProfile}</h2>
+      <ProfileView />
     </AccountLayout>
   )
 }

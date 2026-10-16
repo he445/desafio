@@ -1,5 +1,7 @@
 import { delay, http, HttpResponse } from 'msw'
 import {
+  AVATAR_MAX_BYTES,
+  AVATAR_TYPES,
   AddCartItemInputSchema,
   ApplyCouponInputSchema,
   AuthResponseSchema,
@@ -85,8 +87,6 @@ import { getActiveScenarioId } from '@/mocks/scenarios/registry'
 import { readJson, requireUser, resolveCartOwner } from './request'
 
 const API = import.meta.env.VITE_API_BASE_URL || '/api/v1'
-const AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp']
-const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 
 async function toDataUrl(file: File): Promise<string> {
   const bytes = new Uint8Array(await file.arrayBuffer())

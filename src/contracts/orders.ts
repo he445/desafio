@@ -118,6 +118,9 @@ export const UpdateProfileInputSchema = z.object({
 })
 export type UpdateProfileInput = z.infer<typeof UpdateProfileInputSchema>
 
+export const AVATAR_TYPES: readonly string[] = ['image/png', 'image/jpeg', 'image/webp']
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+
 export const AvatarResponseSchema = z.object({
   avatarUrl: z.string().nullable(),
 })
