@@ -22,11 +22,11 @@ Hoje `src/features/realtime` tem só o ledger de versões (`event-ledger.ts`); o
 
 Regras de dependência, travadas por `no-restricted-imports` em `eslint.config.js`:
 
-- `axios` só é importado em `src/lib/http.ts`, a instância única.
+- `axios` só é importado em `src/lib/http.ts`, a instância única, e no teste dela.
 - `src/routes/`, `src/components/` e `src/features/*/{components,hooks}/` não importam `@/lib/http`: os dados chegam pelos hooks de `src/features/*/queries.ts`, que usam `src/features/*/api.ts`.
 - `src/components/` não importa `features/`, `routes/` nem `app/`. Layout e ui recebem dados por props, e a rota faz a ligação: a raiz passa a sessão, o contador do carrinho e o logout para o header e a tab bar.
 - `src/features/` não importa `routes/` nem `app/`. `src/lib/` não importa `app/`, `routes/`, `features/` nem `components/`; de `src/content/` usa só as mensagens de erro do cliente HTTP.
-- `src/contracts/` só depende de zod e de `src/lib/eth.ts`, porque é compartilhado com o mock; `src/content/` só reaproveita as mensagens de validação dos contratos.
+- `src/contracts/` só pode depender de zod e de `src/lib/eth.ts`, porque é compartilhado com o mock e com os testes E2E, que rodam em Node; `src/content/` só reaproveita as mensagens de validação dos contratos.
 - O app não importa `src/mocks/`; a única entrada é o `import('./mocks/browser')` dinâmico de `src/main.tsx`. Por sua vez, `src/mocks/` só importa `src/contracts/` e `src/lib/eth.ts`.
 
 ### Ordem de boot no cliente
@@ -109,17 +109,32 @@ No cliente, `src/lib/http.ts` converte todo erro em `ApiError` (`src/lib/api-err
 
 ## 3. Eventos Socket.IO
 
-O servidor simulado em `src/mocks/realtime/server.ts` publica eventos tipados (`RealtimeEventSchema`) sempre que o domínio altera um NFT ou um pedido:
+O servidor simulado em `src/mocks/realtime/server.ts` publica um evento sempre que o domínio altera um NFT ou um pedido. O envelope é o mesmo para os dois tipos (`RealtimeEventSchema` em `src/contracts/realtime.ts`):
 
-- `nft.updated`: público para todas as conexões ativas; carrega `version` incrementada do NFT, lista de edições (`id`, `price`, `available`) e `priceFrom` recalculado.
-- `order.updated`: privado (enviado apenas para conexões cujo token corresponde ao `order.userId`); carrega `version`, `status` (`pending | confirmed | rejected`), `rejectionReason` e `transaction`.
+```json
+{
+  "eventId": "uuid",
+  "type": "nft.updated",
+  "resource": { "kind": "nft", "id": "emerald-ape-042" },
+  "version": 5,
+  "occurredAt": "2026-10-15T12:00:00.000Z",
+  "userId": "só em order.updated",
+  "data": {}
+}
+```
+
+- `nft.updated` vai para todas as conexões. `data` traz as edições (`id`, `price`, `available`) e o `priceFrom` recalculado.
+- `order.updated` vai só para as conexões autenticadas como `order.userId`. `data` traz `status` (`pending`, `confirmed` ou `rejected`), `rejectionReason` e `transaction`.
+- `version` é a do recurso depois da mudança, a mesma que as respostas REST carregam; é ela que permite descartar evento atrasado (seção 8). `eventId` identifica o envio: o cenário `duplicate-events` repete cada evento com o mesmo `eventId` e depois manda uma cópia com `version` anterior e `eventId` novo.
+- No cenário `offline` nenhum evento sai.
 
 ## 4. Servidor simulado: transporte, cenários e limitações
 
-- **REST:** o Service Worker (`public/mockServiceWorker.js`) intercepta `fetch` e XHR; os handlers ficam em `src/mocks/handlers/`.
-- **WebSocket:** o MSW troca a classe global `WebSocket` na mesma aba e o `@mswjs/socket.io-binding` (`toSocketIo(connection)`) fala o protocolo do Socket.IO. O long-polling do Engine.IO não é interceptado, então o cliente precisa usar só o transporte `websocket`.
-- **Ping manual:** o binding 0.2.0 anuncia `pingInterval: 25000` e `pingTimeout: 5000`, mas nunca envia ping. O mock envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no `close`; sem isso o cliente derruba a conexão por "ping timeout" aos 30 s.
-- **Usuário do socket:** o binding confirma o CONNECT antes de expor o `auth`, então o mock lê o pacote cru `40{"token":"…"}` e associa a conexão ao `userId`. Sem token válido a conexão fica anônima e só recebe `nft.updated`.
+- REST: o Service Worker (`public/mockServiceWorker.js`) intercepta `fetch` e XHR; os handlers ficam em `src/mocks/handlers/`.
+- WebSocket: o MSW troca a classe global `WebSocket` na mesma aba e o `@mswjs/socket.io-binding` (`toSocketIo(connection)`) fala o protocolo do Socket.IO. O long-polling do Engine.IO não é interceptado, então o cliente precisa usar só o transporte `websocket`.
+- Ping manual: o binding 0.2.0 anuncia `pingInterval: 25000` e `pingTimeout: 5000`, mas nunca envia ping. O mock envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no `close`; sem isso o cliente derruba a conexão por "ping timeout" aos 30 s.
+- Usuário do socket: o binding confirma o CONNECT antes de expor o `auth`, então o mock lê o pacote cru `40{"token":"…"}` e associa a conexão ao `userId`. Sem token válido a conexão fica anônima e só recebe `nft.updated`.
+- Sem rooms nem acks: o binding não tem essas APIs. O mock guarda as conexões num `Map`, filtra por `userId` a cada emissão e não espera confirmação de entrega.
 
 ### Banco e domínio
 
@@ -144,7 +159,7 @@ As regras ficam em `src/mocks/domain/` como funções sobre o `MockDb`, sem leit
 | `__root`                             | `src/routes/__root.tsx`                                     | Público        | Resolve a sessão com `ensureQueryData` (erro vira `null`) e a coloca no contexto; renderiza `SiteHeader` (desktop), `SiteFooter`, `MobileTabBar` (mobile), `Announcer`, `Toaster` e `ScenarioPanel`                      |
 | `/`                                  | `src/routes/index.tsx`                                      | Público        | Valida search params com `CatalogSearchSchema` (`.catch()` em cada campo) e remove valores padrão da URL via `stripSearchParams`                                                                                         |
 | `/nft/$nftId`                        | `src/routes/nft.$nftId.tsx`                                 | Público        | Valida `?edition=`; 404 da API dispara `notFound()` com tela dedicada ("NFT não encontrado")                                                                                                                             |
-| `/cart`                              | `src/routes/cart.tsx`                                       | Público        | Funciona tanto para visitante (`X-Guest-Cart-Id`) quanto para usuário autenticado                                                                                                                                        |
+| `/cart`                              | `src/routes/cart.tsx`                                       | Público        | O carrinho é o do visitante (`X-Guest-Cart-Id`) ou o do usuário logado                                                                                                                                                   |
 | `/login`, `/register`                | `src/routes/login.tsx`, `src/routes/register.tsx`           | Visitante      | Com sessão, redireciona para `redirect` ou `/`. `redirect` passa por `toSafeRedirect` (`src/lib/redirect.ts`): só vale caminho da mesma origem, resolvido contra uma origem fixa, o que também barra `//host` e `/\host` |
 | `/_authenticated`                    | `src/routes/_authenticated.tsx`                             | Privado        | Sem `context.session`, lança `redirect({ to: '/login', search: { redirect: location.href } })`                                                                                                                           |
 | `/checkout`                          | `src/routes/_authenticated/checkout.tsx`                    | Privado        | Protegida pelo layout `_authenticated`                                                                                                                                                                                   |
@@ -155,35 +170,41 @@ As regras ficam em `src/mocks/domain/` como funções sobre o `MockDb`, sem leit
 
 A sessão é um token opaco (`kurio-tok-…`) com expiração, guardado em `localStorage` (`nftmkt:session`). O `beforeLoad` da raiz resolve a sessão uma vez com `ensureQueryData` e a entrega no contexto; `_authenticated`, `/login` e `/register` leem `context.session` em vez de consultar de novo.
 
-- **Boot:** com token salvo, `GET /auth/session`. `401` apaga o token e o usuário segue como visitante. Erro de rede ou `5xx` (cenários `offline` e `flaky`) mantém o token: a navegação continua como visitante e a próxima verificação recupera a sessão.
-- **Revalidação:** a consulta da sessão tem `staleTime: Infinity` e `refetchOnWindowFocus: 'always'`; é o foco da janela que percebe uma sessão vencida em segundo plano.
-- **Expiração durante o uso:** qualquer `401 SESSION_EXPIRED` faz o interceptor do Axios chamar os ouvintes de `onSessionExpired` (`src/lib/http.ts`), sem importar o router. O hook `useSessionSync` (`src/features/auth/hooks/use-session-sync.ts`), montado na raiz, grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado e navega para `/login?redirect=<href>&reason=expired`. Ele só age se havia sessão no cache: um token já vencido no boot é resolvido pela própria consulta, e vários `401` seguidos disparam o fluxo uma vez.
-- **Limpeza do cache privado** (`clearPrivateCache`): a sessão vira `null` antes de `removeQueries` em `['user']`, `['cart']` e `['quote']`, para nenhuma consulta montada refazer o pedido com a chave do usuário anterior; o ledger de eventos também é zerado.
-- **Logout** (`useSignOut`): `POST /auth/logout` (erro de rede ignorado), apaga o token e o id de visitante, cria um id de visitante novo, limpa o cache privado e, se a rota atual é privada, volta para `/`.
-- **Outras abas:** o evento `storage` em `nftmkt:session` sincroniza login e logout. Se o usuário mudou (logout ou troca de conta), a aba limpa o cache privado e invalida o router, o que tira uma rota privada da tela.
-- **Trade-off:** com backend real, o token iria num cookie `httpOnly; Secure; SameSite=Lax` com refresh rotativo. O MSW no navegador não emula `httpOnly`, então optei pelo `localStorage` e mantive todas as chaves privadas com o `userId`.
+- Boot: com token salvo, `GET /auth/session`. `401` apaga o token e o usuário segue como visitante. Erro de rede ou `5xx` (cenários `offline` e `flaky`) mantém o token: a navegação continua como visitante e a próxima verificação recupera a sessão.
+- Revalidação: a consulta da sessão tem `staleTime: Infinity` e `refetchOnWindowFocus: 'always'`; é o foco da janela que percebe uma sessão vencida em segundo plano.
+- Expiração durante o uso: qualquer `401 SESSION_EXPIRED` faz o interceptor do Axios chamar os ouvintes de `onSessionExpired` (`src/lib/http.ts`), sem importar o router. O hook `useSessionSync` (`src/features/auth/hooks/use-session-sync.ts`), montado na raiz, grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado e navega para `/login?redirect=<href>&reason=expired`. Ele só age se havia sessão no cache: um token já vencido no boot é resolvido pela própria consulta, e vários `401` seguidos disparam o fluxo uma vez.
+- Limpeza do cache privado (`clearPrivateCache`): a sessão vira `null` antes de `removeQueries` em `['user']`, `['cart']` e `['quote']`, para nenhuma consulta montada refazer o pedido com a chave do usuário anterior; o ledger de eventos também é zerado.
+- Logout (`useSignOut`): `POST /auth/logout` (erro de rede ignorado), apaga o token e o id de visitante, cria um id de visitante novo, limpa o cache privado e, se a rota atual é privada, volta para `/`.
+- Outras abas: o evento `storage` em `nftmkt:session` sincroniza login e logout. Se o usuário mudou (logout ou troca de conta), a aba limpa o cache privado e invalida o router, o que tira uma rota privada da tela.
+- Trade-off: com backend real, o token iria num cookie `httpOnly; Secure; SameSite=Lax` com refresh rotativo. O MSW no navegador não emula `httpOnly`, então optei pelo `localStorage` e mantive todas as chaves privadas com o `userId`.
 
 ## 6. Carrinho, cotação e valores em ETH
 
 - Valores em ETH trafegam como string decimal (`EthAmount`) e todo cálculo em `src/lib/eth.ts` usa `bigint` em wei (18 casas). O mesmo módulo serve o app e o mock, e o Vitest faz a ida e volta (`formatEth(parseEth(x))`) de todos os valores do seed.
-- **Visitante:** o cliente gera o id do carrinho e o envia em `X-Guest-Cart-Id`. Sem o cabeçalho, o servidor cria um carrinho com id próprio em vez de reaproveitar um carrinho anônimo comum.
-- **Mesclagem no login:** `POST /cart/merge` soma as quantidades do visitante às do usuário, limita cada linha a `min(available, maxPerOrder)`, descreve cada corte em `adjustments` e mantém o cupom do visitante quando o usuário não tem um. O carrinho de visitante é apagado.
-- **Cotação como verdade:** subtotal, desconto, taxa (0.016 ETH na Ethereum, 0.002 na Polygon e 0.001 na Solana) e total saem de `POST /quotes`. Estoque insuficiente, edição esgotada e cupom inválido ou expirado aparecem em `issues` e bloqueiam a compra. `PRICE_CHANGED` compara o preço atual com `unitPriceWhenAdded` e só informa: a cotação já traz o preço novo.
-- **Pós-compra:** na confirmação, o servidor subtrai do carrinho exatamente as linhas e quantidades do recibo; o que foi adicionado depois da cotação continua lá. A recusa devolve o estoque reservado e não mexe no carrinho.
+- Visitante: o cliente gera o id do carrinho e o envia em `X-Guest-Cart-Id`. Sem o cabeçalho, o servidor cria um carrinho com id próprio em vez de reaproveitar um carrinho anônimo comum.
+- Mesclagem no login: `POST /cart/merge` soma as quantidades do visitante às do usuário, limita cada linha a `min(available, maxPerOrder)`, descreve cada corte em `adjustments` e mantém o cupom do visitante quando o usuário não tem um. O carrinho de visitante é apagado.
+- Cotação como verdade: subtotal, desconto, taxa (0.016 ETH na Ethereum, 0.002 na Polygon e 0.001 na Solana) e total saem de `POST /quotes`. Estoque insuficiente, edição esgotada e cupom inválido ou expirado aparecem em `issues` e bloqueiam a compra. `PRICE_CHANGED` compara o preço atual com `unitPriceWhenAdded` e só informa: a cotação já traz o preço novo.
+- Pós-compra: na confirmação, o servidor subtrai do carrinho exatamente as linhas e quantidades do recibo; o que foi adicionado depois da cotação continua lá. A recusa devolve o estoque reservado e não mexe no carrinho.
 
 ## 7. Estratégia de cache, retries e sincronização
 
-As chaves do TanStack Query são centralizadas em `src/lib/query-keys.ts` (`qk`). Dados privados ficam sempre aninhados sob `['user', userId, ...]`, garantindo isolamento estrutural entre contas: no logout ou na troca de usuário, `removeQueries({ queryKey: ['user'] })`, `removeQueries({ queryKey: ['cart'] })` e `removeQueries({ queryKey: ['quote'] })` eliminam imediatamente qualquer dado do usuário anterior.
+As chaves do TanStack Query ficam em `src/lib/query-keys.ts` (`qk`), e toda chave de dado privado carrega o dono: `['user', userId, ...]` para favoritos, perfil, carteiras e pedidos, `['cart', 'user:<id>']` ou `['cart', 'guest:<id>']` para o carrinho e `['quote', dono, rede, versão do carrinho]` para a cotação. No logout ou na troca de usuário, `clearPrivateCache` remove `['user']`, `['cart']` e `['quote']` inteiros (seção 5).
 
-Configuração base do `QueryClient` em `src/app/query-client.ts`:
+Padrões do `QueryClient` (`src/app/query-client.ts`):
 
-- `staleTime` padrão de 30 s (`Infinity` para `session`, `0` para `cart`, `quote` e `pendingOrders`, `60 s` para `featured`, `favorites`, `profile` e `wallets`).
-- Retries limitados a 2 tentativas apenas quando `ApiError.retryable === true` (erros de rede, timeout, HTTP 429, 500 e 503), com backoff exponencial `min(500 * 2^attempt, 4000)` ms.
-- Mutations não executam retry automático.
+- `staleTime` de 30 s.
+- Até 2 novas tentativas, só quando `ApiError.retryable` é `true` (rede, timeout, HTTP 429, 500 e 503), com espera de `min(500 × 2^tentativa, 4000)` ms.
+- Mutations sem retry automático.
+
+| Consulta              | Chave                    | `staleTime`   | Revalidação                                                                |
+| --------------------- | ------------------------ | ------------- | -------------------------------------------------------------------------- |
+| `sessionQueryOptions` | `['session']`            | `Infinity`    | `refetchOnWindowFocus: 'always'`, sem retry; `401` vira `null`             |
+| `cartQueryOptions`    | `['cart', dono]`         | `0`           | No foco da janela; o contador do header lê a mesma consulta (`select`)     |
+| `nftQueryOptions`     | `['nfts', 'detail', id]` | padrão (30 s) | O loader de `/nft/$nftId` chama `ensureQueryData`; `404` vira `notFound()` |
 
 ## 8. Reconciliação REST e Socket.IO
 
-`src/features/realtime/event-ledger.ts` guarda os últimos 500 `eventId` e a maior `version` conhecida de cada NFT e pedido, venha ela de uma resposta REST ou de um evento. As respostas de carrinho e cotação registram a `nftVersion` de cada linha (`recordResourceVersion`).
+`src/features/realtime/event-ledger.ts` guarda os últimos 500 `eventId` e a maior `version` conhecida de cada NFT e pedido, venha ela de uma resposta REST ou de um evento. O detalhe do NFT registra a `version` recebida, e as respostas de carrinho e cotação registram a `nftVersion` de cada linha (`recordResourceVersion`).
 
 - `shouldAcceptEvent` descarta um `eventId` repetido e um evento cuja `version` não passa da conhecida. Um id que saiu da janela de 500 continua barrado pela versão.
 - `markSideEffectOnce` libera toast, navegação ou anúncio uma vez por recurso e versão, e nunca para uma versão mais antiga do que uma que já rodou.
@@ -220,11 +241,14 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 | Ganchos de cenário fora do domínio                       | `if (cenário)` dentro das regras             | O domínio fica puro e testável; o cenário altera o banco antes da validação, e a falha chega pelas mesmas checagens de uma mudança real                                                                                         |
 | Liquidação do pedido gravada no banco                    | `setTimeout` em memória                      | Um refresh com pedido pendente perdia o timer e o pedido nunca saía de `pending`                                                                                                                                                |
 | `DELETE /me/avatar` para remover o avatar                | `PUT /me/avatar` com JSON                    | Uma rota com dois formatos de corpo exigia validação em dobro; a remoção ganha rota própria                                                                                                                                     |
+| Números sem aspas na URL                                 | Serializador padrão do TanStack Router       | O padrão grava `minPrice=%220.5%22`. Com `parseQuotableJson` (`src/app/router.ts`), número vai sem aspas e os schemas de busca o convertem de volta em texto                                                                    |
+| Timeout do Axios como `ETIMEDOUT`                        | Tratar `ECONNABORTED` como timeout           | O Axios usa `ECONNABORTED` também para conexão abortada; `transitional.clarifyTimeoutError` separa os dois casos (seção 2)                                                                                                      |
 
 ## 11. Decisões de UX
 
 - Estados não desenhados no Figma (skeletons, estados vazios, erro de rota e 404) seguem a paleta escura Kurio (`#140D0A`, `#241612`, `#D28A4C`) e a tipografia Roboto Mono.
-- Abaixo de `1024px` (`lg`), a interface adota a composição mobile; a partir de `1024px`, a composição desktop de 1200 px.
+- Abaixo de `1024px` (`lg`), a interface adota a composição mobile; a partir de `1024px`, a composição desktop de 1200 px. Em tablet (768 px) vale a mobile, com a coluna limitada a 720 px e centralizada.
+- O painel de cenários é um botão fixo no canto inferior direito. Ele só existe com `VITE_API_MOCKING=enabled`, carrega sob demanda (`lazy`), fica fora do bundle inicial e some nos testes com `window.__hideScenarioPanel`.
 - Onde as duas composições têm estrutura diferente (header ou barra superior, barra lateral de conta ou pílulas, breadcrumb), a página renderiza só uma delas com `useIsDesktop()`, em vez de esconder a outra por CSS. Assim cada página tem um único `h1`: no mobile ele é o título da barra superior; no desktop, onde o Figma não mostra título em conta e pagamento, ele fica visualmente oculto (`sr-only`) e o conteúdo começa nos `h2` do Figma.
 - O `<Link>` do TanStack Router marca `aria-current="page"` em todo link cujo caminho bate, o que em `/` marcava o logo, Mercado, Aprenda e o EXPLORAR do hero, todos apontando para `/` ou `/#âncora`. Esses links usam `NavLink` (`src/components/ui/nav-link.tsx`), que recebe `current` de quem chama; no header, só Início recebe `aria-current`, e só quando a rota é `/`.
 - Os toasts ficam no canto superior direito no desktop e centralizados no topo no mobile (`src/components/ui/sonner.tsx`), sobre o conteúdo.
@@ -243,7 +267,7 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 
 ## 13. Assets e imagens
 
-As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`) foram exportadas dos nós originais do Figma e organizadas em `assets/figma/`. O script `scripts/build-assets.mjs` processa cada arte com `sharp` para gerar quatro vistas quadradas (inteira, rosto, detalhe e moldura sobre `#241612`) nos formatos AVIF e WebP em 320, 640 e 960 px dentro de `public/images/nfts/`.
+As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`, 1000 × 1000 px) foram exportadas dos nós originais do Figma e ficam em `assets/figma/`. O script `scripts/build-assets.mjs` gera com `sharp` quatro vistas quadradas de cada arte (inteira, rosto, detalhe e moldura sobre `#241612`) em AVIF e WebP de 320, 640 e 960 px, em `public/images/nfts/<arte>-<vista>-<largura>.<formato>`, mais uma cópia WebP de 640 px sem a largura no nome (`emerald-1.webp`), usada onde o seed guarda uma única imagem. Uma arte com menos de 960 px faz o script parar, para nenhuma variante ser ampliada.
 
 ## 14. Limitações conhecidas
 
