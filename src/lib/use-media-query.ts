@@ -1,23 +1,15 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useMemo, useSyncExternalStore } from 'react'
 
 export function useMediaQuery(query: string): boolean {
-  return useSyncExternalStore(
-    (callback) => {
-      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-        return () => {}
-      }
-      const mql = window.matchMedia(query)
-      mql.addEventListener('change', callback)
-      return () => mql.removeEventListener('change', callback)
+  const mediaQuery = useMemo(() => window.matchMedia(query), [query])
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      mediaQuery.addEventListener('change', onChange)
+      return () => mediaQuery.removeEventListener('change', onChange)
     },
-    () => {
-      if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-        return true
-      }
-      return window.matchMedia(query).matches
-    },
-    () => true,
+    [mediaQuery],
   )
+  return useSyncExternalStore(subscribe, () => mediaQuery.matches)
 }
 
 export function useIsDesktop(): boolean {
