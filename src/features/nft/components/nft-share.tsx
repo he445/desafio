@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { copy } from '@/content/copy'
-import { MessageIcon, XSocialIcon } from '@/components/icons'
+import { LinkedInIcon, MessageIcon, XSocialIcon } from '@/components/icons'
 
 function ShareLink({
   href,
@@ -55,9 +55,7 @@ export function NftShare({ title }: { title: string }) {
             href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`}
             label={copy.detail.shareLinkedIn}
           >
-            <span aria-hidden="true" className="text-[13px] leading-none font-bold">
-              in
-            </span>
+            <LinkedInIcon size={15} />
           </ShareLink>
           <ShareLink
             href={`mailto:?subject=${encodedTitle}&body=${encodedUrl}`}

@@ -14,6 +14,9 @@ export function CatalogSkeleton({
   withPagination?: boolean
 }) {
   const { columns, isDesktop } = useGridColumns()
+  // In two phone columns a long title or a price with its old value takes a second line, and
+  // each grid row grows to its tallest card; one more bar keeps the skeleton at that height.
+  const twoLineText = columns === 2 && !isDesktop
 
   return (
     <div aria-busy="true">
@@ -23,6 +26,7 @@ export function CatalogSkeleton({
           <div key={index} className={staggerClassName(index, columns, isDesktop)}>
             <Skeleton className="h-[200px] rounded-[20px] lg:h-[300px] lg:rounded-none" />
             <Skeleton className="mt-3 ml-2 h-[22px] w-3/4 lg:ml-0 lg:h-4" />
+            {twoLineText && <Skeleton className="mt-[5px] ml-2 h-[18px] w-1/2" />}
             <Skeleton className="mt-2 ml-2 h-6 w-1/3 lg:mt-3 lg:ml-0 lg:h-4" />
           </div>
         ))}

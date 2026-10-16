@@ -104,14 +104,24 @@ function AuthPage({ mode, redirect, expired }: AuthScreenProps) {
     mode === 'login' ? (
       <>
         {copy.auth.newToKurio}{' '}
-        <Link to="/register" search={{ redirect }} replace className="text-highlight">
+        <Link
+          to="/register"
+          search={{ redirect }}
+          replace
+          className="text-highlight underline underline-offset-2"
+        >
           {copy.auth.createAnAccountLink}
         </Link>
       </>
     ) : (
       <>
         {copy.auth.alreadyHaveAccount}{' '}
-        <Link to="/login" search={{ redirect }} replace className="text-highlight">
+        <Link
+          to="/login"
+          search={{ redirect }}
+          replace
+          className="text-highlight underline underline-offset-2"
+        >
           {copy.auth.signInLink}
         </Link>
       </>

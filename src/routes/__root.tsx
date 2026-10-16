@@ -64,8 +64,9 @@ function RootLayout() {
         )}
         <main
           id="main-content"
+          tabIndex={-1}
           className={cn(
-            'mx-auto w-full max-w-[720px] flex-1 px-6 lg:mt-8',
+            'mx-auto w-full max-w-[720px] flex-1 px-6 outline-none lg:mt-8',
             desktopContainer,
             showTabBar && !showFooter && 'pb-[150px]',
           )}

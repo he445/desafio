@@ -572,6 +572,17 @@ export function XSocialIcon(props: IconProps) {
   )
 }
 
+export function LinkedInIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <path
+        fill="currentColor"
+        d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9.75h4v11.75H3Zm6.5 0h3.83v1.6h.05c.53-1 1.84-2.06 3.8-2.06 4.05 0 4.82 2.67 4.82 6.13v6.08h-4v-5.39c0-1.29-.02-2.94-1.79-2.94-1.8 0-2.07 1.4-2.07 2.85v5.48h-4Z"
+      />
+    </svg>
+  )
+}
+
 export function YouTubeIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>

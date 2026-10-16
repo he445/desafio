@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import type { Order } from '@/contracts'
 import { copy } from '@/content/copy'
@@ -143,6 +143,13 @@ function useReceiptAutoOpen(orderId: string) {
 function ConfirmedOrder({ order, variant }: { order: Order; variant: Variant }) {
   const [open, setOpen] = useReceiptAutoOpen(order.id)
   const desktop = variant === 'desktop'
+  const reopenRef = useRef<HTMLButtonElement>(null)
+  // The receipt has no Radix trigger: it may open by itself, so on close the focus goes to the
+  // button that reopens it instead of falling to the body.
+  const returnFocus = (event: Event) => {
+    event.preventDefault()
+    reopenRef.current?.focus()
+  }
 
   return (
     <>
@@ -159,7 +166,7 @@ function ConfirmedOrder({ order, variant }: { order: Order; variant: Variant }) 
           title={<h2>{copy.order.confirmedHeadline}</h2>}
         />
         <div className={cn('flex justify-center', desktop ? 'pb-8' : 'pt-2')}>
-          <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+          <Button ref={reopenRef} type="button" variant="outline" onClick={() => setOpen(true)}>
             {copy.order.viewReceipt}
           </Button>
         </div>
@@ -167,7 +174,11 @@ function ConfirmedOrder({ order, variant }: { order: Order; variant: Variant }) 
 
       {desktop ? (
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="max-w-[578px]" aria-describedby={undefined}>
+          <DialogContent
+            className="max-w-[578px]"
+            aria-describedby={undefined}
+            onCloseAutoFocus={returnFocus}
+          >
             <OrderReceipt
               order={order}
               variant="desktop"
@@ -181,7 +192,7 @@ function ConfirmedOrder({ order, variant }: { order: Order; variant: Variant }) 
         </Dialog>
       ) : (
         <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent aria-describedby={undefined}>
+          <SheetContent aria-describedby={undefined} onCloseAutoFocus={returnFocus}>
             <OrderReceipt
               order={order}
               variant="mobile"
