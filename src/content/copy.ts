@@ -7,15 +7,26 @@ export const copy = {
     phone: '+55 11 4002 8922',
     outOfScope: 'Fora do escopo desta demonstração',
   },
+  meta: {
+    title: 'Kurio — Marketplace de NFTs',
+    description: 'Descubra NFTs selecionados de criadores emergentes e consagrados na Kurio.',
+    pageTitle: (page: string) => `${page} | Kurio`,
+  },
   nav: {
     home: 'Início',
     market: 'Mercado',
     creators: 'Criadores',
     learn: 'Aprenda',
+    cart: 'Carrinho',
     signIn: 'Entrar',
     account: 'Conta',
     searchPlaceholder: 'Explorar coleções',
     skipToContent: 'Pular para o conteúdo',
+  },
+  a11y: {
+    primaryNav: 'Principal',
+    breadcrumb: 'Trilha de navegação',
+    close: 'Fechar',
   },
   footer: {
     medallions: [

@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Dialog as SheetPrimitive } from 'radix-ui'
 import { X } from 'lucide-react'
+import { copy } from '@/content/copy'
 import { cn } from '@/lib/utils'
 
 const Sheet = SheetPrimitive.Root
@@ -42,7 +43,7 @@ const SheetContent = React.forwardRef<
     >
       {children}
       <SheetPrimitive.Close
-        aria-label="Fechar"
+        aria-label={copy.a11y.close}
         className="absolute top-6 right-6 inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-raised text-highlight"
       >
         <X className="h-[18px] w-[18px]" />

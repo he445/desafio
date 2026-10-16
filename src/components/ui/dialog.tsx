@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Dialog as DialogPrimitive } from 'radix-ui'
 import { X } from 'lucide-react'
+import { copy } from '@/content/copy'
 import { cn } from '@/lib/utils'
 
 const Dialog = DialogPrimitive.Root
@@ -40,7 +41,7 @@ const DialogContent = React.forwardRef<
       {children}
       {!hideClose && (
         <DialogPrimitive.Close
-          aria-label="Fechar"
+          aria-label={copy.a11y.close}
           className="absolute top-3 right-3 inline-flex h-6 w-6 items-center justify-center text-highlight transition-opacity hover:opacity-80"
         >
           <X className="h-[18px] w-[18px]" />

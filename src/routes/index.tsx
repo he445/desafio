@@ -23,7 +23,7 @@ function HomePage() {
 
 export const Route = createFileRoute('/')({
   head: () => ({
-    meta: [{ title: 'Início | Kurio' }],
+    meta: [{ title: copy.meta.pageTitle(copy.nav.home) }],
   }),
   component: HomePage,
 })

@@ -25,7 +25,7 @@ function RootLayout() {
             <Link to="/" className="text-sm font-bold tracking-[0.1em] text-foreground">
               {copy.brand.logo}
             </Link>
-            <nav aria-label="Principal" className="flex items-center gap-6">
+            <nav aria-label={copy.a11y.primaryNav} className="flex items-center gap-6">
               <Link
                 to="/"
                 className="text-base/4 text-foreground [&.active]:font-bold [&.active]:text-highlight"
@@ -36,7 +36,7 @@ function RootLayout() {
                 to="/cart"
                 className="text-base/4 text-foreground [&.active]:font-bold [&.active]:text-highlight"
               >
-                Carrinho
+                {copy.nav.cart}
               </Link>
             </nav>
           </div>
@@ -66,13 +66,7 @@ function NotFoundPage() {
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
-    meta: [
-      { title: 'Kurio — Marketplace de NFTs' },
-      {
-        name: 'description',
-        content: 'Descubra NFTs selecionados de criadores emergentes e consagrados na Kurio.',
-      },
-    ],
+    meta: [{ title: copy.meta.title }, { name: 'description', content: copy.meta.description }],
   }),
   component: RootLayout,
   notFoundComponent: NotFoundPage,
