@@ -18,12 +18,9 @@ flowchart TD
 
 Regras de dependência aplicadas via ESLint (`no-restricted-imports`):
 
-- `axios` só é importado em `src/lib/http.ts`, a instância única.
-- `src/routes/`, `src/components/` e `src/features/*/components|hooks/` não importam `axios` nem `@/lib/http`: os dados chegam pelos hooks de `src/features/*/queries.ts`, que usam `src/features/*/api.ts`.
-- O código da aplicação não importa nada de `src/mocks/`; o único acesso é o `import('./mocks/browser')` dinâmico em `src/main.tsx`.
-- `src/mocks/` só importa de `src/contracts/` e `src/lib/eth.ts`, além das bibliotecas.
-
-A direção `routes/` → `features/` → `lib/`, `contracts/` e `components/` é convenção do projeto, sem trava de lint.
+- `src/routes/` consome `src/features/`, `src/components/`, `src/lib/` e `src/contracts/`.
+- Componentes nunca importam Axios diretamente; toda comunicação HTTP passa por `src/features/*/api.ts` e `src/features/*/queries.ts`.
+- O código da aplicação não importa nada de `src/mocks/`, exceto o `import('./mocks/browser')` dinâmico em `src/main.tsx`.
 
 ### Ordem de boot no cliente
 
@@ -31,24 +28,92 @@ O pacote `engine.io-client` captura a referência `globalThis.WebSocket` no mome
 
 ## 2. Contratos REST
 
-Os schemas Zod em `src/contracts/` são compartilhados entre o cliente HTTP e os handlers do MSW. Esta seção será expandida na Fase 1 com a tabela completa de endpoints, cabeçalhos e códigos de erro.
+Todos os schemas de entrada e saída estão centralizados em `src/contracts/` e são validados com `Schema.parse()` tanto nos handlers do MSW (`src/mocks/handlers/index.ts`) quanto no cliente HTTP.
+
+### Cabeçalhos padronizados
+
+- `Authorization: Bearer <token>`: sessão autenticada.
+- `X-Guest-Cart-Id`: identificador do carrinho anônimo persistido no navegador para visitantes.
+- `X-Request-Id`: UUID gerado pelo interceptor de request do Axios e ecoado pelo servidor simulado em todas as respostas.
+- `Idempotency-Key`: UUID obrigatório em `POST /api/v1/orders` para impedir compras duplicadas em retries após timeout ou cliques repetidos.
+
+### Tabela de endpoints (`/api/v1`)
+
+| Método e rota                    | Auth     | Entrada                                                                                          | Resposta de sucesso                                      | Códigos de erro principais                                                                                 |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `POST /auth/register`            | Não      | `{ username, email, password }`                                                                  | `201 AuthResponse`                                       | `409 EMAIL_TAKEN`, `409 USERNAME_TAKEN`, `422 VALIDATION_FAILED`                                           |
+| `POST /auth/login`               | Não      | `{ email, password }`                                                                            | `200 AuthResponse`                                       | `401 INVALID_CREDENTIALS`, `422 VALIDATION_FAILED`                                                         |
+| `GET /auth/session`              | Sim      | —                                                                                                | `200 AuthResponse`                                       | `401 UNAUTHENTICATED`, `401 SESSION_EXPIRED`                                                               |
+| `POST /auth/logout`              | Sim      | —                                                                                                | `204 No Content`                                         | —                                                                                                          |
+| `GET /nfts`                      | Não      | Query: `q, collection, category, network, tab, minPrice, maxPrice, status, sort, page, pageSize` | `200 NftListResponse`                                    | `500 INTERNAL`, `503 UNAVAILABLE`                                                                          |
+| `GET /nfts/featured`             | Não      | —                                                                                                | `200 FeaturedNftsResponse`                               | `500 INTERNAL`                                                                                             |
+| `GET /nfts/:id`                  | Não      | —                                                                                                | `200 Nft`                                                | `404 NOT_FOUND`                                                                                            |
+| `GET /me/favorites`              | Sim      | —                                                                                                | `200 FavoritesResponse`                                  | `401 UNAUTHENTICATED`                                                                                      |
+| `PUT /me/favorites/:nftId`       | Sim      | —                                                                                                | `204 No Content`                                         | `401 UNAUTHENTICATED`, `404 NOT_FOUND`                                                                     |
+| `DELETE /me/favorites/:nftId`    | Sim      | —                                                                                                | `204 No Content`                                         | `401 UNAUTHENTICATED`, `404 NOT_FOUND`                                                                     |
+| `GET /cart`                      | Opcional | —                                                                                                | `200 Cart`                                               | —                                                                                                          |
+| `POST /cart/items`               | Opcional | `{ nftId, editionId, quantity }`                                                                 | `200 Cart`                                               | `404 NOT_FOUND`, `409 AVAILABILITY_CONFLICT`                                                               |
+| `PATCH /cart/items/:itemId`      | Opcional | `{ quantity }`                                                                                   | `200 Cart`                                               | `404 NOT_FOUND`, `409 AVAILABILITY_CONFLICT`                                                               |
+| `DELETE /cart/items/:itemId`     | Opcional | —                                                                                                | `200 Cart`                                               | `404 NOT_FOUND`                                                                                            |
+| `PUT /cart/coupon`               | Opcional | `{ code }`                                                                                       | `200 Cart`                                               | `422 COUPON_INVALID`, `422 COUPON_EXPIRED`                                                                 |
+| `DELETE /cart/coupon`            | Opcional | —                                                                                                | `200 Cart`                                               | —                                                                                                          |
+| `POST /cart/merge`               | Sim      | `{ guestCartId }`                                                                                | `200 MergeCartResponse`                                  | `401 UNAUTHENTICATED`                                                                                      |
+| `POST /quotes`                   | Opcional | `{ network }`                                                                                    | `200 Quote`                                              | `409 BAD_REQUEST` (carrinho vazio)                                                                         |
+| `POST /wallet-connections`       | Sim      | `{ walletId, network, provider }`                                                                | `200 WalletConnectionResponse`                           | `404 NOT_FOUND`, `409 WALLET_REJECTED`                                                                     |
+| `DELETE /wallet-connections/:id` | Sim      | —                                                                                                | `204 No Content`                                         | `401 UNAUTHENTICATED`                                                                                      |
+| `POST /orders`                   | Sim      | `{ quoteId, connectionId, buyer }` + `Idempotency-Key`                                           | `201 Order` (novo) / `200 Order` (repetição idempotente) | `409 QUOTE_OUTDATED`, `409 AVAILABILITY_CONFLICT`, `409 IDEMPOTENCY_KEY_REUSED`, `409 WALLET_DISCONNECTED` |
+| `GET /orders/:id`                | Sim      | —                                                                                                | `200 Order`                                              | `403 FORBIDDEN`, `404 NOT_FOUND`                                                                           |
+| `GET /orders?status=pending`     | Sim      | —                                                                                                | `200 PendingOrdersResponse`                              | `401 UNAUTHENTICATED`                                                                                      |
+| `GET /me/profile`                | Sim      | —                                                                                                | `200 Profile`                                            | `401 UNAUTHENTICATED`                                                                                      |
+| `PATCH /me/profile`              | Sim      | `{ displayName, username, email, ensName, walletNickname }`                                      | `200 Profile`                                            | `409 USERNAME_TAKEN`, `409 EMAIL_TAKEN`, `422 VALIDATION_FAILED`                                           |
+| `PUT /me/avatar`                 | Sim      | `multipart/form-data` (`file` ≤ 2 MB; PNG/JPEG/WebP)                                             | `200 AvatarResponse`                                     | `413 FILE_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`                                                         |
+| `POST /me/password`              | Sim      | `{ currentPassword, newPassword }`                                                               | `204 No Content`                                         | `422 WRONG_PASSWORD`, `422 VALIDATION_FAILED`                                                              |
+| `GET /me/wallets`                | Sim      | —                                                                                                | `200 WalletsResponse`                                    | `401 UNAUTHENTICATED`                                                                                      |
+| `POST /me/wallets`               | Sim      | `CreateWalletInput`                                                                              | `201 Wallet`                                             | `409 WALLET_CONFLICT`, `422 VALIDATION_FAILED`                                                             |
+| `PATCH /me/wallets/:id`          | Sim      | `UpdateWalletInput`                                                                              | `200 Wallet`                                             | `403 FORBIDDEN`, `404 NOT_FOUND`, `409 WALLET_CONFLICT`, `422 VALIDATION_FAILED`                           |
+
+### Envelope de erro e normalização no cliente
+
+O servidor simulado devolve erros no formato:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Revise os campos destacados.",
+    "fieldErrors": { "email": ["E-mail já cadastrado"] },
+    "details": {},
+    "retryable": false,
+    "requestId": "..."
+  }
+}
+```
+
+No cliente (`src/lib/http.ts` e `src/lib/api-error.ts`), qualquer erro (HTTP, falha de conexão do MSW ou timeout do Axios de 8 s) é convertido em `ApiError` com `retryable: true` apenas para falhas de rede, timeout e HTTP 429, 500 e 503.
 
 ## 3. Eventos Socket.IO
 
-Documentação detalhada de envelope, deduplicação por `eventId`, controle de versão monotônica por recurso e isolamento por `userId` será preenchida na Fase 7.
+O servidor simulado em `src/mocks/realtime/server.ts` publica eventos tipados (`RealtimeEventSchema`) sempre que o domínio altera um NFT ou um pedido:
+
+- `nft.updated`: público para todas as conexões ativas; carrega `version` incrementada do NFT, lista de edições (`id`, `price`, `available`) e `priceFrom` recalculado.
+- `order.updated`: privado (enviado apenas para conexões cujo token corresponde ao `order.userId`); carrega `version`, `status` (`pending | confirmed | rejected`), `rejectionReason` e `transaction`.
 
 ## 4. Transporte dos mocks e limitações
 
 - **REST:** interceptado via Service Worker (`public/mockServiceWorker.js`).
-- **WebSocket:** interceptado no mesmo processo da aba via `@mswjs/socket.io-binding`. O transporte do `socket.io-client` é restrito a `['websocket']`, pois o MSW não intercepta o long-polling HTTP do Engine.IO.
+- **WebSocket:** interceptado na mesma aba via `@mswjs/socket.io-binding` (`toSocketIo(connection)`).
+- **Keep-alive manual:** o `@mswjs/socket.io-binding` 0.2.0 envia `pingInterval: 25000` e `pingTimeout: 5000` no handshake, mas não dispara pacotes de ping sozinho. O servidor simulado envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no evento `close`, impedindo desconexões por ping timeout aos 30 s.
+- **Identificação do usuário no socket:** como o binding confirma o pacote CONNECT antes de expor o payload de autenticação, o mock inspeciona a mensagem Engine.IO/Socket.IO iniciada por `40{...}` para extrair o token e associar a conexão ao `userId`.
 
 ## 5. Política de sessão
 
-A ser detalhada na Fase 5 (token opaco com expiração, retomada de rota após `SESSION_EXPIRED`, limpeza de cache privado no logout e na troca de usuário).
+Sessões são representadas por tokens opacos (`kurio-tok-...`) validados pelo servidor simulado a cada requisição privada. No cenário `session-expired`, o TTL é reduzido para 60 s. Quando o interceptor do Axios recebe `401 SESSION_EXPIRED`, emite o evento `session:expired` para que a camada de autenticação salve a rota atual e redirecione para `/login` preservando o contexto.
 
-## 6. Estado do carrinho
+## 6. Estado do carrinho e precisão em ETH
 
-A ser detalhado na Fase 6 (carrinho anônimo via `X-Guest-Cart-Id`, mesclagem no login, cupons e cotação como única referência de valores para o pedido).
+- Valores monetários trafegam exclusivamente como strings decimais (`EthAmount`) e todos os cálculos em `src/lib/eth.ts` operam em `bigint` na escala de wei ($10^{18}$), evitando erros de ponto flutuante IEEE-754.
+- A cotação (`POST /api/v1/quotes`) é a única fonte de verdade para subtotal, desconto, taxa de rede (`0.016 ETH` na Ethereum, `0.002 ETH` na Polygon e `0.001 ETH` na Solana) e total.
+- Na confirmação do pedido (`confirmed`), o servidor subtrai do carrinho apenas os itens e quantidades constantes no snapshot `order.receipt.lines`, preservando qualquer item adicionado após a geração da cotação.
 
 ## 7. Estratégia de cache, retries e sincronização
 
@@ -60,11 +125,14 @@ Configuração base do `QueryClient` em `src/app/query-client.ts`:
 
 ## 8. Reconciliação REST e Socket.IO
 
-A ser detalhada nas Fases 7 e 8.
+A ser detalhada nas Fases 7 e 8 com o `event-ledger` no cliente.
 
 ## 9. Idempotência de pedidos
 
-A ser detalhada na Fase 8 (`Idempotency-Key` persistida por tentativa de checkout em `localStorage`).
+`POST /api/v1/orders` exige o cabeçalho `Idempotency-Key`. O domínio armazena `userId + key -> { bodyHash, orderId, createdAt }` por 24 h:
+
+- Mesma chave + mesmo hash SHA-256 do corpo canônico: retorna HTTP `200` com o pedido existente, sem reservar estoque novamente nem duplicar a compra.
+- Mesma chave + corpo diferente: retorna HTTP `409 IDEMPOTENCY_KEY_REUSED`.
 
 ## 10. Registro de decisões
 
@@ -78,6 +146,7 @@ A ser detalhada na Fase 8 (`Idempotency-Key` persistida por tentativa de checkou
 | Fonte `Roboto Mono Variable` auto-hospedada em `/fonts/` | Google Fonts CDN ou import CSS do Fontsource | Evita conexão externa no LCP e mantém caminho fixo sem hash para `<link rel="preload">` no `index.html`, acompanhado de `@font-face` de fallback com métricas ajustadas (`ascent-override: 104.79%`, `descent-override: 27.1%`) |
 | `src/routeTree.gen.ts` versionado no Git                 | Gerar apenas em build/dev                    | Permite que `npm run typecheck` (`tsc -b`) passe imediatamente após `npm ci` num checkout limpo                                                                                                                                 |
 | `.env` versionado com padrões públicos da simulação      | `.env.example` com cópia manual              | Não há segredos no projeto; versionar `.env` (ignorando `.env.local` no `.gitignore`) garante que `npm ci && npm run ci` e o deploy na Vercel funcionem sem etapa manual                                                        |
+| Hashes PBKDF2 do seed pré-calculados                     | Calcular PBKDF2 no boot inicial              | Mantém a verificação criptográfica real via Web Crypto (`100.000` iterações SHA-256) sem penalizar o TBT/LCP na primeira abertura da página                                                                                     |
 
 ## 11. Decisões de UX
 
@@ -93,7 +162,7 @@ A ser detalhada na Fase 8 (`Idempotency-Key` persistida por tentativa de checkou
 
 ## 13. Assets e imagens
 
-As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`) foram exportadas do Figma em PNG 4x (1000×1000), a partir dos nós `4:137`, `4:162`, `4:164` e `4:286`, e organizadas em `assets/figma/`. O script `scripts/build-assets.mjs` processa cada arte com `sharp` para gerar quatro vistas quadradas (inteira, rosto, detalhe e moldura sobre `#241612`) nos formatos AVIF e WebP em 320, 640 e 960 px dentro de `public/images/nfts/`, com as dimensões em `manifest.json`. O script recusa PNG com menos de 960 px de lado, para nenhuma variante sair ampliada.
+As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`) foram exportadas dos nós originais do Figma e organizadas em `assets/figma/`. O script `scripts/build-assets.mjs` processa cada arte com `sharp` para gerar quatro vistas quadradas (inteira, rosto, detalhe e moldura sobre `#241612`) nos formatos AVIF e WebP em 320, 640 e 960 px dentro de `public/images/nfts/`.
 
 ## 14. Limitações conhecidas
 
