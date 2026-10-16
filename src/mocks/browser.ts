@@ -4,7 +4,7 @@ export const worker = setupWorker()
 
 export async function startMocks(): Promise<void> {
   await worker.start({
-    quiet: true,
+    quiet: import.meta.env.PROD,
     onUnhandledRequest(request, print) {
       const url = new URL(request.url)
       if (url.pathname.startsWith('/api/')) {
