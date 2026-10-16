@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from '@playwright/test'
+import type { MockControl } from '../../src/mocks/control'
 import type { NetworkRule } from '../../src/mocks/scenarios/network'
 import { SCENARIO_STORAGE_KEY, type ScenarioId } from '../../src/mocks/scenarios/registry'
 import { SESSION_STORAGE_KEY } from '../../src/lib/storage'
@@ -46,6 +47,26 @@ export class MockDriver {
   }): Promise<void> {
     await this.ready()
     await this.page.evaluate((next) => window.__mock?.changeEdition(next), change)
+  }
+
+  // Events emitted before the page connects are lost, so a test waits for the socket of the
+  // expected user (null for a visitor) before it changes anything on the server.
+  async waitForSocket(userId: string | null = null): Promise<void> {
+    await this.ready()
+    await expect
+      .poll(() => this.page.evaluate(() => window.__mock?.listSockets() ?? []))
+      .toContain(userId)
+  }
+
+  // Sends an event exactly as given, to exercise duplicates and stale versions.
+  async emitRaw(event: Parameters<MockControl['emitRaw']>[0]): Promise<void> {
+    await this.ready()
+    await this.page.evaluate((next) => window.__mock?.emitRaw(next), event)
+  }
+
+  async dropSockets(refuseForMs: number): Promise<void> {
+    await this.ready()
+    await this.page.evaluate((ms) => window.__mock?.dropSockets({ refuseForMs: ms }), refuseForMs)
   }
 
   // Every open session reaches its expiry now; the next private request answers 401.
