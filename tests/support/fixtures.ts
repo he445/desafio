@@ -1,17 +1,66 @@
 import { test as base, expect, type Page } from '@playwright/test'
+import type { NetworkRule } from '../../src/mocks/scenarios/network'
+import { SCENARIO_STORAGE_KEY, type ScenarioId } from '../../src/mocks/scenarios/registry'
 import { SESSION_STORAGE_KEY } from '../../src/lib/storage'
 
 export { expect }
 
 export const PASSWORD = 'Senha@1234'
 
-// The scenario panel floats over the page and is not part of the product under test.
-export const test = base.extend({
-  page: async ({ page }, use) => {
-    await page.addInitScript(() => {
-      window.__hideScenarioPanel = true
-    })
+// A typed driver over window.__mock: the only way a test changes what the simulated server does.
+export class MockDriver {
+  constructor(private readonly page: Page) {}
+
+  private async ready(): Promise<void> {
+    await expect(this.page.locator('html')).toHaveAttribute('data-mocks', 'ready')
+  }
+
+  async setRules(rules: NetworkRule[]): Promise<void> {
+    await this.ready()
+    await this.page.evaluate((next) => window.__mock?.setRules(next), rules)
+  }
+
+  async clearRules(): Promise<void> {
+    await this.ready()
+    await this.page.evaluate(() => window.__mock?.clearRules())
+  }
+
+  // Holds the next request that matches until release() is called with the returned gate.
+  async hold(match: NetworkRule['match']): Promise<string> {
+    await this.ready()
+    const gate = await this.page.evaluate((next) => window.__mock?.hold(next), match)
+    if (!gate) throw new Error('window.__mock is not available')
+    return gate
+  }
+
+  async release(gate: string): Promise<void> {
+    await this.page.evaluate((id) => window.__mock?.release(id), gate)
+  }
+}
+
+interface Fixtures {
+  scenario: ScenarioId
+  mock: MockDriver
+}
+
+export const test = base.extend<Fixtures>({
+  // Applied before the first load, together with the hidden scenario panel. A scenario the
+  // test changes later with window.__mock is not overwritten by the next page load.
+  scenario: ['default', { option: true }],
+  page: async ({ page, scenario }, use) => {
+    await page.addInitScript(
+      ({ id, key }) => {
+        window.__hideScenarioPanel = true
+        if (id !== 'default' && window.localStorage.getItem(key) === null) {
+          window.localStorage.setItem(key, id)
+        }
+      },
+      { id: scenario, key: SCENARIO_STORAGE_KEY },
+    )
     await use(page)
+  },
+  mock: async ({ page }, use) => {
+    await use(new MockDriver(page))
   },
 })
 
