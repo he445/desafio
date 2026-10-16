@@ -1,5 +1,6 @@
 import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { AuthResponse } from '@/contracts'
+import { isApiError } from '@/lib/api-error'
 import { qk } from '@/lib/query-keys'
 import {
   clearGuestCartId,
@@ -20,15 +21,17 @@ export function sessionQueryOptions() {
     queryKey: qk.session(),
     staleTime: Infinity,
     retry: false,
-    refetchOnWindowFocus: true,
+    // With staleTime Infinity a plain `true` never refetches; the focus check is what
+    // catches a session that expired while the tab was in the background.
+    refetchOnWindowFocus: 'always',
     queryFn: async ({ signal }): Promise<AuthResponse | null> => {
-      const stored = getStoredSession()
-      if (!stored) return null
+      if (!getStoredSession()) return null
       try {
         const auth = await fetchSession({ signal })
         setStoredSession(auth.session)
         return auth
-      } catch {
+      } catch (error) {
+        if (!isApiError(error) || error.status !== 401) throw error
         clearStoredSession()
         return null
       }

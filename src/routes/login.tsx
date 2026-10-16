@@ -2,7 +2,6 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { z } from 'zod'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
-import { sessionQueryOptions } from '@/features/auth/queries'
 
 const LoginSearchSchema = z.object({
   redirect: z
@@ -35,9 +34,8 @@ function LoginPage() {
 
 export const Route = createFileRoute('/login')({
   validateSearch: (search) => LoginSearchSchema.parse(search),
-  beforeLoad: async ({ context, search }) => {
-    const session = await context.queryClient.ensureQueryData(sessionQueryOptions())
-    if (session) {
+  beforeLoad: ({ context, search }) => {
+    if (context.session) {
       throw redirect({ to: search.redirect || '/' })
     }
   },
