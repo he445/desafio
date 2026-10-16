@@ -11,3 +11,8 @@ export const LoginSearchSchema = z.object({
 export const RegisterSearchSchema = z.object({
   redirect: RedirectSchema,
 })
+
+// Account pages opened from the checkout carry the way back.
+export const ReturnSearchSchema = z.object({
+  redirect: RedirectSchema,
+})

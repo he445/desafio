@@ -3,6 +3,7 @@ import { copy } from '@/content/copy'
 import { AccountLayout } from '@/components/layout/account-layout'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
 import { useSignOut } from '@/features/auth/hooks/use-sign-out'
+import { ReturnSearchSchema } from '@/features/auth/search'
 
 function WalletsPage() {
   const signOut = useSignOut()
@@ -15,6 +16,7 @@ function WalletsPage() {
 }
 
 export const Route = createFileRoute('/_authenticated/wallets')({
+  validateSearch: ReturnSearchSchema,
   head: () => ({
     meta: [{ title: copy.meta.pageTitle(copy.account.wallets) }],
   }),
