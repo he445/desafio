@@ -1,7 +1,8 @@
-import { createFileRoute, Link, stripSearchParams } from '@tanstack/react-router'
+import { createFileRoute, stripSearchParams } from '@tanstack/react-router'
 import { CatalogSearchSchema, DEFAULT_CATALOG_SEARCH } from '@/contracts'
 import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
+import { NavLink } from '@/components/ui/nav-link'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
 
 function HomePage() {
@@ -14,9 +15,9 @@ function HomePage() {
       <p className="max-w-[557px] text-sm/6 text-body">{copy.home.heroDesktop.description}</p>
       <div className="pt-4">
         <Button asChild size="hero">
-          <Link to="/" hash="mercado">
+          <NavLink to="/" hash="mercado">
             {copy.home.heroDesktop.cta}
-          </Link>
+          </NavLink>
         </Button>
       </div>
     </section>

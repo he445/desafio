@@ -37,7 +37,7 @@ function RootLayout() {
   useSessionSync()
 
   const showFooter = isDesktop || location.pathname === '/'
-  const showMobileTab = !isDesktop && location.pathname === '/'
+  const showTabBar = !isDesktop && hasMobileTabBar(location.pathname)
 
   return (
     <TooltipProvider>
@@ -58,12 +58,16 @@ function RootLayout() {
         )}
         <main
           id="main-content"
-          className={cn('mx-auto w-full max-w-[720px] flex-1 px-6 lg:mt-8', desktopContainer)}
+          className={cn(
+            'mx-auto w-full max-w-[720px] flex-1 px-6 lg:mt-8',
+            desktopContainer,
+            showTabBar && !showFooter && 'pb-[150px]',
+          )}
         >
           <Outlet />
         </main>
-        {showFooter && <SiteFooter withMobileTabSpacing={showMobileTab} />}
-        {!isDesktop && hasMobileTabBar(location.pathname) && <MobileTabBar cartCount={cartCount} />}
+        {showFooter && <SiteFooter withMobileTabSpacing={showTabBar} />}
+        {showTabBar && <MobileTabBar cartCount={cartCount} />}
       </div>
       <Announcer />
       <Toaster />

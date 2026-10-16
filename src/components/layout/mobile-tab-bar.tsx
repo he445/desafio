@@ -17,7 +17,8 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
     const searchInput = document.getElementById('mobile-catalog-search')
     if (searchInput instanceof HTMLInputElement) {
       searchInput.focus()
-      searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      searchInput.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' })
       return
     }
     void navigate({ to: '/', hash: 'mercado' })
@@ -25,7 +26,7 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
 
   return (
     <nav
-      aria-label="Navegação inferior"
+      aria-label={copy.a11y.bottomNav}
       className="fixed inset-x-0 bottom-0 z-40 flex h-[126px] items-end lg:hidden"
     >
       <div className="relative flex h-[94px] w-full items-center justify-around rounded-t-[32px] bg-surface px-6 shadow-sheet">
@@ -37,7 +38,7 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
             isHome ? 'text-highlight' : 'text-body',
           )}
         >
-          <span className="sr-only">Início</span>
+          <span className="sr-only">{copy.nav.home}</span>
           <HomeIcon size={20} filled={isHome} />
         </Link>
 
@@ -49,7 +50,7 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
             isFavorites ? 'text-highlight' : 'text-body',
           )}
         >
-          <span className="sr-only">Lista de interesse</span>
+          <span className="sr-only">{copy.account.favorites}</span>
           <HeartIcon size={20} filled={isFavorites} />
         </Link>
 
@@ -57,7 +58,7 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
           <button
             type="button"
             onClick={handleScanClick}
-            aria-label="Explorar coleções"
+            aria-label={copy.nav.searchPlaceholder}
             className="flex h-[65px] w-[65px] items-center justify-center rounded-full bg-cta text-ink ring-[6px] ring-ink"
           >
             <ScanIcon size={24} />
@@ -81,7 +82,7 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
             isAccount ? 'text-highlight' : 'text-body',
           )}
         >
-          <span className="sr-only">Conta</span>
+          <span className="sr-only">{copy.nav.account}</span>
           <UserIcon size={20} />
         </Link>
       </div>

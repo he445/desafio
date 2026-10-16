@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
+import { NavLink } from '@/components/ui/nav-link'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { CartBadge } from './cart-badge'
@@ -73,20 +74,17 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
       <div
         className={cn(desktopContainer, 'grid h-[45px] grid-cols-[160px_1fr_auto] items-center')}
       >
-        <Link
-          to="/"
-          className="text-sm font-bold tracking-[0.1em] text-foreground focus-visible:outline-none"
-        >
+        <NavLink to="/" className="text-sm font-bold tracking-[0.1em] text-foreground">
           {copy.brand.logo}
-        </Link>
+        </NavLink>
 
         <nav
-          aria-label="Navegação principal"
+          aria-label={copy.a11y.primaryNav}
           className="flex h-full items-center justify-center gap-10"
         >
-          <Link
+          <NavLink
             to="/"
-            aria-current={location.pathname === '/' ? 'page' : undefined}
+            current={location.pathname === '/'}
             className={cn(
               'relative flex h-full items-center text-base/4 transition-colors',
               active === 'home'
@@ -101,9 +99,9 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
                 className="absolute inset-x-0 -bottom-px h-[2px] bg-primary"
               />
             )}
-          </Link>
+          </NavLink>
 
-          <Link
+          <NavLink
             to="/"
             hash="mercado"
             className={cn(
@@ -120,19 +118,19 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
                 className="absolute inset-x-0 -bottom-px h-[2px] bg-primary"
               />
             )}
-          </Link>
+          </NavLink>
 
           <OutOfScopeAction className="text-base/4 text-foreground">
             {copy.nav.creators}
           </OutOfScopeAction>
 
-          <Link
+          <NavLink
             to="/"
             hash="diario"
             className="flex h-full items-center text-base/4 text-foreground transition-colors hover:text-highlight"
           >
             {copy.nav.learn}
-          </Link>
+          </NavLink>
         </nav>
 
         <div className="flex items-center gap-7">
@@ -147,18 +145,16 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
               </button>
             </PopoverTrigger>
             <PopoverContent className="w-[320px] p-3">
-              <form onSubmit={handleSearchSubmit} className="flex items-center gap-2">
+              <form role="search" onSubmit={handleSearchSubmit}>
                 <Input
                   type="search"
+                  enterKeyHint="search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={copy.nav.searchPlaceholder}
                   aria-label={copy.nav.searchPlaceholder}
                   className="h-9"
                 />
-                <Button type="submit" size="default" className="h-9 px-3 text-xs">
-                  Ir
-                </Button>
               </form>
             </PopoverContent>
           </Popover>
@@ -175,7 +171,7 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
           {signedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="default" size="signIn" aria-label={copy.nav.account}>
+                <Button variant="default" size="signIn">
                   <UserIcon size={20} />
                   <span>{copy.nav.account}</span>
                 </Button>
