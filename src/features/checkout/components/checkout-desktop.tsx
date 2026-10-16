@@ -4,19 +4,12 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { BuyerSchema, type Buyer, type Cart, type Profile, type Wallet } from '@/contracts'
 import { copy } from '@/content/copy'
 import { Checkbox } from '@/components/ui/checkbox'
+import { EnsInput, FieldSelect, FormField } from '@/components/ui/form-field'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { CouponField } from '@/features/cart/components/coupon-field'
 import { couponIssue } from '@/features/cart/quote'
 import type { CheckoutState } from '../hooks/use-checkout'
 import { buyerDefaults, walletsOn } from '../review'
-import { CheckoutField } from './checkout-field'
 import { CheckoutItems, CheckoutTotals, QuoteReview } from './checkout-summary'
 import { ConfirmBlock } from './confirm-block'
 import { WalletOptions } from './wallet-options'
@@ -64,18 +57,14 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
       >
         <h2 className="text-[17px] font-bold text-heading">{copy.checkout.collectorProfile}</h2>
         <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
-          <CheckoutField
-            label={copy.checkout.displayName}
-            required
-            error={errors.displayName?.message}
-          >
+          <FormField label={copy.checkout.displayName} required error={errors.displayName?.message}>
             <Input autoComplete="name" {...form.register('displayName')} />
-          </CheckoutField>
-          <CheckoutField label={copy.checkout.username} required error={errors.username?.message}>
+          </FormField>
+          <FormField label={copy.checkout.username} required error={errors.username?.message}>
             <Input autoComplete="username" {...form.register('username')} />
-          </CheckoutField>
+          </FormField>
 
-          <CheckoutField label={copy.checkout.network} required>
+          <FormField label={copy.checkout.network} required>
             <FieldSelect
               value={wallet?.network ?? ''}
               placeholder={copy.checkout.selectNetwork}
@@ -94,31 +83,27 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
                 if (network) checkout.selectNetwork(network.id)
               }}
             />
-          </CheckoutField>
-          <CheckoutField
-            label={copy.checkout.profileName}
-            required
-            error={errors.profileName?.message}
-          >
+          </FormField>
+          <FormField label={copy.checkout.profileName} required error={errors.profileName?.message}>
             <Input {...form.register('profileName')} />
-          </CheckoutField>
+          </FormField>
 
-          <CheckoutField label={copy.checkout.walletAddress} required>
+          <FormField label={copy.checkout.walletAddress} required>
             <Input
               readOnly
               value={wallet?.address ?? ''}
               placeholder={copy.checkout.walletAddressPlaceholder}
             />
-          </CheckoutField>
-          <CheckoutField label={copy.checkout.secondaryOrEnsPlaceholder} hideLabel>
+          </FormField>
+          <FormField label={copy.checkout.secondaryOrEnsPlaceholder} hideLabel>
             <Input
               readOnly
               value={wallet?.ens ?? ''}
               placeholder={copy.checkout.secondaryOrEnsPlaceholder}
             />
-          </CheckoutField>
+          </FormField>
 
-          <CheckoutField label={copy.checkout.walletType} required>
+          <FormField label={copy.checkout.walletType} required>
             <FieldSelect
               value={checkout.provider ?? ''}
               placeholder={copy.checkout.selectWalletType}
@@ -132,21 +117,21 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
                 if (option) checkout.connectProvider(option.id)
               }}
             />
-          </CheckoutField>
-          <CheckoutField
+          </FormField>
+          <FormField
             label={copy.checkout.referralCode}
             required
             error={errors.referralCode?.message}
           >
             <Input {...form.register('referralCode')} />
-          </CheckoutField>
+          </FormField>
 
-          <CheckoutField label={copy.checkout.email} required error={errors.email?.message}>
+          <FormField label={copy.checkout.email} required error={errors.email?.message}>
             <Input type="email" autoComplete="email" {...form.register('email')} />
-          </CheckoutField>
-          <CheckoutField label={copy.checkout.ensName} required error={errors.ensName?.message}>
+          </FormField>
+          <FormField label={copy.checkout.ensName} required error={errors.ensName?.message}>
             <EnsInput {...form.register('ensName')} />
-          </CheckoutField>
+          </FormField>
         </div>
 
         <div className="mt-5 flex items-center gap-2">
@@ -162,7 +147,7 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
         </div>
         <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-3">
           {useAnotherWallet && wallet && (
-            <CheckoutField label={copy.checkout.otherWallet} required>
+            <FormField label={copy.checkout.otherWallet} required>
               <FieldSelect
                 value={wallet.id}
                 options={sameNetworkWallets.map((option) => ({
@@ -171,16 +156,16 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
                 }))}
                 onValueChange={checkout.selectWallet}
               />
-            </CheckoutField>
+            </FormField>
           )}
           <div className="col-start-1">
-            <CheckoutField label={copy.checkout.collectorNote}>
+            <FormField label={copy.checkout.collectorNote}>
               <textarea
                 rows={4}
                 className="w-full rounded-field border border-field bg-transparent px-3 py-2 text-sm text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:outline-none"
                 {...form.register('note')}
               />
-            </CheckoutField>
+            </FormField>
           </div>
         </div>
       </form>
@@ -241,55 +226,6 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
 
         <ConfirmBlock checkout={checkout} variant="desktop" formId={formId} className="mt-6" />
       </aside>
-    </div>
-  )
-}
-
-interface FieldSelectProps extends Omit<
-  React.ComponentProps<typeof SelectTrigger>,
-  'value' | 'children'
-> {
-  value: string
-  placeholder?: string
-  options: { value: string; label: string; disabled?: boolean }[]
-  onValueChange: (value: string) => void
-}
-
-// The field passes id and aria attributes to the trigger, which is what the label points at.
-function FieldSelect({
-  value,
-  placeholder,
-  options,
-  onValueChange,
-  disabled,
-  ...triggerProps
-}: FieldSelectProps) {
-  return (
-    <Select value={value} onValueChange={onValueChange} disabled={disabled}>
-      <SelectTrigger {...triggerProps}>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-}
-
-function EnsInput(props: React.ComponentProps<typeof Input>) {
-  return (
-    <div className="relative">
-      <Input {...props} className="pr-14" />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-muted-foreground"
-      >
-        {copy.checkout.ensSuffix}
-      </span>
     </div>
   )
 }
