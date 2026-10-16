@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PasswordSchema, VALIDATION_MESSAGES } from './index'
+import { PasswordSchema, SessionSchema, VALIDATION_MESSAGES } from './index'
 import { CatalogSearchSchema } from './nfts'
 
 describe('CatalogSearchSchema', () => {
@@ -31,5 +31,15 @@ describe('PasswordSchema', () => {
     expect(issues('abcdefgh')).toEqual([VALIDATION_MESSAGES.passwordLetterAndDigit])
     expect(issues('12345678')).toEqual([VALIDATION_MESSAGES.passwordLetterAndDigit])
     expect(issues('Senha@1234')).toEqual([])
+  })
+})
+
+describe('timestamps', () => {
+  it('accept only ISO 8601 instants', () => {
+    const session = { token: 'tok', userId: 'user-1', expiresAt: '2026-07-29T15:30:00.000Z' }
+    expect(SessionSchema.safeParse(session).success).toBe(true)
+    expect(SessionSchema.safeParse({ ...session, expiresAt: '29/07/2026 15:30' }).success).toBe(
+      false,
+    )
   })
 })

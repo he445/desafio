@@ -106,7 +106,7 @@ export const QuoteSchema = z.object({
   networkFee: EthAmountSchema,
   total: EthAmountSchema,
   issues: z.array(QuoteIssueSchema),
-  expiresAt: z.string(),
+  expiresAt: z.iso.datetime(),
 })
 export type Quote = z.infer<typeof QuoteSchema>
 

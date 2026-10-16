@@ -57,8 +57,8 @@ export const OrderSchema = z.object({
   provider: WalletProviderSchema,
   receipt: OrderReceiptSchema,
   transaction: OrderTransactionSchema.nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+  createdAt: z.iso.datetime(),
+  updatedAt: z.iso.datetime(),
   version: z.number().int().positive(),
 })
 export type Order = z.infer<typeof OrderSchema>

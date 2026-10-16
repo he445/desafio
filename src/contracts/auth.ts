@@ -19,7 +19,7 @@ export type UserSummary = z.infer<typeof UserSummarySchema>
 export const SessionSchema = z.object({
   token: z.string(),
   userId: z.string(),
-  expiresAt: z.string(),
+  expiresAt: z.iso.datetime(),
 })
 export type Session = z.infer<typeof SessionSchema>
 

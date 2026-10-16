@@ -35,7 +35,7 @@ O `engine.io-client` guarda `globalThis.WebSocket` quando o módulo é avaliado.
 
 ## 2. Contratos REST
 
-A fonte da verdade é `src/contracts/`: um schema zod por corpo e por resposta, usado pelo cliente e pelos handlers do MSW. Os handlers validam a entrada com `readJson` (`src/mocks/handlers/request.ts`) e passam a saída pelo mesmo schema que o cliente usa antes de responder.
+A fonte da verdade é `src/contracts/`: um schema zod por corpo e por resposta, usado pelo cliente e pelos handlers do MSW. Os handlers validam a entrada com `readJson` (`src/mocks/handlers/request.ts`) e passam a saída pelo mesmo schema que o cliente usa antes de responder. Valores em ETH trafegam como string decimal (`EthAmountSchema`), e datas como ISO 8601 em UTC (`z.iso.datetime()`; a data das avaliações é só `AAAA-MM-DD`).
 
 ### Cabeçalhos
 

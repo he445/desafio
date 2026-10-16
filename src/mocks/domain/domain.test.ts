@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { Buyer, CartOwner, CreateOrderInput } from '@/contracts'
+import {
+  NftSchema,
+  OrderSchema,
+  type Buyer,
+  type CartOwner,
+  type CreateOrderInput,
+} from '@/contracts'
 import { formatEth, parseEth } from '@/lib/eth'
 import type { MockDb } from '@/mocks/db/schema'
 import {
@@ -95,6 +101,14 @@ describe('seed', () => {
     expect(db.nfts.some((nft) => nft.editions.every((edition) => edition.available === 0))).toBe(
       true,
     )
+  })
+
+  it('fits the response contracts', () => {
+    const db = createSeedDb()
+    for (const nft of db.nfts) expect(NftSchema.safeParse(nft).error).toBeUndefined()
+    for (const order of Object.values(db.orders)) {
+      expect(OrderSchema.safeParse(order).error).toBeUndefined()
+    }
   })
 
   it('lists the nine Figma NFTs first under "recent", in the Figma order', () => {

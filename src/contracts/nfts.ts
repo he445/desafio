@@ -15,7 +15,7 @@ export const NftReviewSchema = z.object({
   author: z.string(),
   rating: z.number().int().min(1).max(5),
   text: z.string(),
-  date: z.string(),
+  date: z.iso.date(),
 })
 export type NftReview = z.infer<typeof NftReviewSchema>
 
@@ -49,7 +49,7 @@ export const NftSchema = z.object({
   featured: z.boolean(),
   trending: z.boolean(),
   rare: z.boolean(),
-  createdAt: z.string(),
+  createdAt: z.iso.datetime(),
   rating: z.object({
     average: z.number(),
     count: z.number().int().nonnegative(),

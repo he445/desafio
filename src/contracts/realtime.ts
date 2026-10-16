@@ -29,7 +29,7 @@ export const NftUpdatedEventSchema = z.object({
     id: z.string(),
   }),
   version: z.number().int().positive(),
-  occurredAt: z.string(),
+  occurredAt: z.iso.datetime(),
   userId: z.string().optional(),
   data: NftUpdatedDataSchema,
 })
@@ -43,7 +43,7 @@ export const OrderUpdatedEventSchema = z.object({
     id: z.string(),
   }),
   version: z.number().int().positive(),
-  occurredAt: z.string(),
+  occurredAt: z.iso.datetime(),
   userId: z.string(),
   data: OrderUpdatedDataSchema,
 })
