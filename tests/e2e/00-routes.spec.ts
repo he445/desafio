@@ -18,7 +18,10 @@ const PUBLIC_ROUTES: RouteCase[] = [
   { path: '/nft/nft-que-nao-existe', heading: 'NFT não encontrado' },
   { path: '/cart', heading: 'Carrinho de NFTs' },
   { path: '/login', heading: 'Entrar' },
-  { path: '/register', heading: 'Criar conta' },
+  {
+    path: '/register',
+    heading: { desktop: 'Criar conta', mobile: 'Criar perfil de colecionador' },
+  },
   { path: '/rota-que-nao-existe', heading: 'Página não encontrada' },
 ]
 

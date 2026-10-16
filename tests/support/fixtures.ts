@@ -36,6 +36,12 @@ export class MockDriver {
   async release(gate: string): Promise<void> {
     await this.page.evaluate((id) => window.__mock?.release(id), gate)
   }
+
+  // Every open session reaches its expiry now; the next private request answers 401.
+  async expireSession(): Promise<void> {
+    await this.ready()
+    await this.page.evaluate(() => window.__mock?.expireSession())
+  }
 }
 
 interface Fixtures {
@@ -85,4 +91,25 @@ export async function signInThroughApi(page: Page, email: string): Promise<void>
     },
     { email, password: PASSWORD, storageKey: SESSION_STORAGE_KEY },
   )
+}
+
+export const USERS = {
+  marina: 'marina@nftmarket.test',
+  rafael: 'rafael@nftmarket.test',
+} as const
+
+// Signs in through the form, so the whole session flow runs: the login request, the cart
+// merge and the redirect.
+export async function loginAs(
+  page: Page,
+  user: keyof typeof USERS,
+  path = '/login',
+): Promise<void> {
+  if (!new URL(page.url(), 'http://localhost').pathname.startsWith('/login')) {
+    await gotoReady(page, path)
+  }
+  await page.getByLabel('E-mail', { exact: true }).fill(USERS[user])
+  await page.getByLabel('Senha', { exact: true }).fill(PASSWORD)
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click()
+  await expect(page).not.toHaveURL(/\/login/)
 }
