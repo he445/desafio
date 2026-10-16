@@ -31,10 +31,7 @@ export async function addCartItemApi(input: AddCartItemInput): Promise<Cart> {
   return recordCartVersions(CartSchema.parse(response.data))
 }
 
-export async function updateCartItemApi(
-  itemId: string,
-  input: UpdateCartItemInput,
-): Promise<Cart> {
+export async function updateCartItemApi(itemId: string, input: UpdateCartItemInput): Promise<Cart> {
   const response = await http.patch(`/cart/items/${itemId}`, input)
   return recordCartVersions(CartSchema.parse(response.data))
 }

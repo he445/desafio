@@ -31,7 +31,7 @@ export function ScenarioPanel() {
   const scenarios = mock.getScenarios()
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
+    <div className="fixed right-4 bottom-4 z-50">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
           <Button
@@ -58,7 +58,7 @@ export function ScenarioPanel() {
                 }}
                 className={`flex w-full items-center justify-between rounded-field border px-3 py-2 text-left text-xs transition-colors ${
                   activeScenario === sc.id
-                    ? 'border-primary bg-surface-dark text-highlight font-bold'
+                    ? 'border-primary bg-surface-dark font-bold text-highlight'
                     : 'border-line bg-surface-raised text-foreground hover:border-field'
                 }`}
               >

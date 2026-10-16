@@ -109,17 +109,17 @@ O servidor simulado em `src/mocks/realtime/server.ts` publica eventos tipados (`
 
 ### Árvore de rotas e proteção (`src/routes/*`)
 
-| Rota | Arquivo | Acesso | Comportamento no `beforeLoad` / `loader` |
-| --- | --- | --- | --- |
-| `__root` | `src/routes/__root.tsx` | Público | Resolve `sessionQueryOptions()` via `ensureQueryData`, renderiza `SiteHeader` (desktop), `SiteFooter`, `MobileTabBar` (mobile), `Announcer`, `Toaster` e `ScenarioPanel` |
-| `/` | `src/routes/index.tsx` | Público | Valida search params com `CatalogSearchSchema` (`.catch()` em cada campo) e remove valores padrão da URL via `stripSearchParams` |
-| `/nft/$nftId` | `src/routes/nft.$nftId.tsx` | Público | Valida `?edition=`; 404 da API dispara `notFound()` com tela dedicada ("NFT não encontrado") |
-| `/cart` | `src/routes/cart.tsx` | Público | Funciona tanto para visitante (`X-Guest-Cart-Id`) quanto para usuário autenticado |
-| `/login`, `/register` | `src/routes/login.tsx`, `src/routes/register.tsx` | Visitante | Se já houver sessão ativa, redireciona para `search.redirect` (validado contra open redirect: deve começar com `/` e não com `//`) ou `/` |
-| `/_authenticated` | `src/routes/_authenticated.tsx` | Privado | Sem sessão válida, lança `redirect({ to: '/login', search: { redirect: location.href } })` |
-| `/checkout` | `src/routes/_authenticated/checkout.tsx` | Privado | Protegida pelo layout `_authenticated` |
-| `/orders/$orderId` | `src/routes/_authenticated/orders.$orderId.tsx` | Privado (dono) | Protegida por sessão e validada no servidor pelo `userId` do pedido (`403 FORBIDDEN` para outro usuário) |
-| `/profile`, `/wallets`, `/favorites` | `src/routes/_authenticated/{profile,wallets,favorites}.tsx` | Privado | Compartilham a `AccountSidebar` (310 px no desktop e barra de pílulas no mobile) |
+| Rota                                 | Arquivo                                                     | Acesso         | Comportamento no `beforeLoad` / `loader`                                                                                                                                 |
+| ------------------------------------ | ----------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `__root`                             | `src/routes/__root.tsx`                                     | Público        | Resolve `sessionQueryOptions()` via `ensureQueryData`, renderiza `SiteHeader` (desktop), `SiteFooter`, `MobileTabBar` (mobile), `Announcer`, `Toaster` e `ScenarioPanel` |
+| `/`                                  | `src/routes/index.tsx`                                      | Público        | Valida search params com `CatalogSearchSchema` (`.catch()` em cada campo) e remove valores padrão da URL via `stripSearchParams`                                         |
+| `/nft/$nftId`                        | `src/routes/nft.$nftId.tsx`                                 | Público        | Valida `?edition=`; 404 da API dispara `notFound()` com tela dedicada ("NFT não encontrado")                                                                             |
+| `/cart`                              | `src/routes/cart.tsx`                                       | Público        | Funciona tanto para visitante (`X-Guest-Cart-Id`) quanto para usuário autenticado                                                                                        |
+| `/login`, `/register`                | `src/routes/login.tsx`, `src/routes/register.tsx`           | Visitante      | Se já houver sessão ativa, redireciona para `search.redirect` (validado contra open redirect: deve começar com `/` e não com `//`) ou `/`                                |
+| `/_authenticated`                    | `src/routes/_authenticated.tsx`                             | Privado        | Sem sessão válida, lança `redirect({ to: '/login', search: { redirect: location.href } })`                                                                               |
+| `/checkout`                          | `src/routes/_authenticated/checkout.tsx`                    | Privado        | Protegida pelo layout `_authenticated`                                                                                                                                   |
+| `/orders/$orderId`                   | `src/routes/_authenticated/orders.$orderId.tsx`             | Privado (dono) | Protegida por sessão e validada no servidor pelo `userId` do pedido (`403 FORBIDDEN` para outro usuário)                                                                 |
+| `/profile`, `/wallets`, `/favorites` | `src/routes/_authenticated/{profile,wallets,favorites}.tsx` | Privado        | Compartilham a `AccountSidebar` (310 px no desktop e barra de pílulas no mobile)                                                                                         |
 
 ### Política de sessão e expiração com retomada
 

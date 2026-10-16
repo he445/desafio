@@ -4,13 +4,7 @@ import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
 import { isApiError } from '@/lib/api-error'
 
-export function RouteErrorBoundary({
-  error,
-  reset,
-}: {
-  error: unknown
-  reset?: () => void
-}) {
+export function RouteErrorBoundary({ error, reset }: { error: unknown; reset?: () => void }) {
   const router = useRouter()
   const queryClient = useQueryClient()
 

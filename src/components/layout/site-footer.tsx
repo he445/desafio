@@ -3,12 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { copy } from '@/content/copy'
-import {
-  FacebookIcon,
-  InstagramIcon,
-  XSocialIcon,
-  YouTubeIcon,
-} from '@/components/icons'
+import { FacebookIcon, InstagramIcon, XSocialIcon, YouTubeIcon } from '@/components/icons'
 import { OutOfScopeAction } from './out-of-scope'
 
 const emailSchema = z.email()
@@ -167,7 +162,7 @@ export function SiteFooter({ withMobileTabSpacing = false }: { withMobileTabSpac
                 { name: 'X', icon: <XSocialIcon size={16} /> },
                 {
                   name: 'LinkedIn',
-                  icon: <span className="text-xs font-bold leading-none">in</span>,
+                  icon: <span className="text-xs leading-none font-bold">in</span>,
                 },
                 { name: 'YouTube', icon: <YouTubeIcon size={18} /> },
               ].map((social) => (

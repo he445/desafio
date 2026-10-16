@@ -84,11 +84,11 @@ function RootLayout() {
       <HeadContent />
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-btn focus:bg-primary focus:px-4 focus:py-2 focus:font-bold focus:text-ink"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-btn focus:bg-primary focus:px-4 focus:py-2 focus:font-bold focus:text-ink"
       >
         {copy.nav.skipToContent}
       </a>
-      <div className=" flex min-h-dvh flex-col bg-ink text-foreground">
+      <div className="flex min-h-dvh flex-col bg-ink text-foreground">
         {isDesktop && <SiteHeader />}
         <main
           id="main-content"

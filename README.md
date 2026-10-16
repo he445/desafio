@@ -105,15 +105,15 @@ A seleção de cenário pode ser feita de três formas:
 
 ## Rotas da aplicação
 
-| Rota | Tela | Acesso |
-| --- | --- | --- |
-| `/` | Início (hero, destaques, filtros, catálogo paginado, promoções e blog) | Público |
-| `/nft/$nftId` | Detalhe do NFT (`?edition=<id>` opcional) | Público |
-| `/cart` | Carrinho de NFTs e resumo da carteira | Público |
-| `/login`, `/register` | Autenticação e criação de conta | Visitante (redireciona usuários já autenticados) |
-| `/checkout` | Pagamento com carteira e revisão da cotação | Privado (redireciona para `/login?redirect=/checkout`) |
-| `/orders/$orderId` | Estado do pedido (`pending`, `confirmed` com recibo ou `rejected`) | Privado (restrito ao dono do pedido) |
-| `/profile`, `/wallets`, `/favorites` | Dados do perfil, carteiras e lista de interesse | Privado |
+| Rota                                 | Tela                                                                   | Acesso                                                 |
+| ------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| `/`                                  | Início (hero, destaques, filtros, catálogo paginado, promoções e blog) | Público                                                |
+| `/nft/$nftId`                        | Detalhe do NFT (`?edition=<id>` opcional)                              | Público                                                |
+| `/cart`                              | Carrinho de NFTs e resumo da carteira                                  | Público                                                |
+| `/login`, `/register`                | Autenticação e criação de conta                                        | Visitante (redireciona usuários já autenticados)       |
+| `/checkout`                          | Pagamento com carteira e revisão da cotação                            | Privado (redireciona para `/login?redirect=/checkout`) |
+| `/orders/$orderId`                   | Estado do pedido (`pending`, `confirmed` com recibo ou `rejected`)     | Privado (restrito ao dono do pedido)                   |
+| `/profile`, `/wallets`, `/favorites` | Dados do perfil, carteiras e lista de interesse                        | Privado                                                |
 
 ## Arquitetura e decisões técnicas
 

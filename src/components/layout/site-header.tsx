@@ -82,12 +82,7 @@ export function SiteHeader() {
   }
 
   return (
-    <header
-      className={cn(
-        'mt-6 w-full',
-        divider && 'border-b border-line',
-      )}
-    >
+    <header className={cn('mt-6 w-full', divider && 'border-b border-line')}>
       <div className="mx-auto grid h-[45px] w-full max-w-[1200px] grid-cols-[160px_1fr_auto] items-center px-6 xl:px-0">
         <Link
           to="/"
@@ -96,13 +91,18 @@ export function SiteHeader() {
           {copy.brand.logo}
         </Link>
 
-        <nav aria-label="Navegação principal" className="flex h-full items-center justify-center gap-10">
+        <nav
+          aria-label="Navegação principal"
+          className="flex h-full items-center justify-center gap-10"
+        >
           <Link
             to="/"
             aria-current={location.pathname === '/' ? 'page' : undefined}
             className={cn(
               'relative flex h-full items-center text-base/4 transition-colors',
-              active === 'home' ? 'font-bold text-highlight' : 'text-foreground hover:text-highlight',
+              active === 'home'
+                ? 'font-bold text-highlight'
+                : 'text-foreground hover:text-highlight',
             )}
           >
             {copy.nav.home}
@@ -181,7 +181,7 @@ export function SiteHeader() {
           >
             <BuyIcon size={24} />
             {totalCount > 0 && (
-              <span className="absolute -right-2 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-ink">
+              <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-ink">
                 {badgeText}
               </span>
             )}

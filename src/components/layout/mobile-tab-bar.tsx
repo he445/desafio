@@ -91,7 +91,7 @@ export function MobileTabBar() {
         >
           <BuyIcon size={20} />
           {totalCount > 0 && (
-            <span className="absolute right-1 top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-ink">
+            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-ink">
               {totalCount > 9 ? '9+' : totalCount}
             </span>
           )}
