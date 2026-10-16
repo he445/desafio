@@ -77,14 +77,18 @@ export type CatalogSort = z.infer<typeof CatalogSortSchema>
 export const CatalogStatusSchema = z.enum(['all', 'available', 'sold_out'])
 export type CatalogStatus = z.infer<typeof CatalogStatusSchema>
 
+// The router decodes `?q=2024` and `?minPrice=0.5` as numbers before validation.
+const SearchTextSchema = z.union([z.string(), z.number(), z.boolean()]).transform(String)
+const SearchEthSchema = SearchTextSchema.pipe(EthAmountSchema)
+
 export const CatalogSearchSchema = z.object({
-  q: z.string().optional().catch(undefined),
-  collection: z.string().optional().catch(undefined),
-  category: z.string().optional().catch(undefined),
+  q: SearchTextSchema.optional().catch(undefined),
+  collection: SearchTextSchema.optional().catch(undefined),
+  category: SearchTextSchema.optional().catch(undefined),
   network: NetworkIdSchema.optional().catch(undefined),
   tab: CatalogTabSchema.default('all').catch('all'),
-  minPrice: EthAmountSchema.optional().catch(undefined),
-  maxPrice: EthAmountSchema.optional().catch(undefined),
+  minPrice: SearchEthSchema.optional().catch(undefined),
+  maxPrice: SearchEthSchema.optional().catch(undefined),
   status: CatalogStatusSchema.default('all').catch('all'),
   sort: CatalogSortSchema.default('recent').catch('recent'),
   page: z.coerce.number().int().min(1).default(1).catch(1),
