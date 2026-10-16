@@ -1,6 +1,7 @@
-import type { EthAmount } from '@/contracts'
-import { getActiveScenarioId, loadDb, resetDb, saveDb, setActiveScenarioId } from '@/mocks/db/store'
-import { changeNftEdition } from '@/mocks/domain/catalog'
+import { EthAmountSchema, type EthAmount } from '@/contracts'
+import { loadDb, resetDb, saveDb } from '@/mocks/db/store'
+import { getNftById } from '@/mocks/domain/catalog'
+import { changeNftEdition } from '@/mocks/domain/inventory'
 import { transitionOrderState } from '@/mocks/domain/orders'
 import { expireActiveSessions } from '@/mocks/domain/session'
 import {
@@ -14,14 +15,21 @@ import {
   holdMatchingRequest,
   releaseRequestGate,
   resetNetworkState,
-  SCENARIOS,
   setCustomNetworkRules,
   type NetworkRule,
-} from '@/mocks/scenarios'
+} from '@/mocks/scenarios/network'
+import {
+  getActiveScenarioId,
+  isScenarioId,
+  SCENARIOS,
+  setActiveScenarioId,
+  type ScenarioDescriptor,
+  type ScenarioId,
+} from '@/mocks/scenarios/registry'
 
 export interface MockControl {
-  getScenario(): string
-  getScenarios(): typeof SCENARIOS
+  getScenario(): ScenarioId
+  getScenarios(): readonly ScenarioDescriptor[]
   setScenario(id: string): Promise<void>
   reset(id?: string): Promise<void>
   setRules(rules: NetworkRule[]): void
@@ -49,51 +57,43 @@ export interface MockControl {
   countOrders(userId: string): number
 }
 
+function toScenarioId(id: string): ScenarioId {
+  if (!isScenarioId(id)) throw new Error(`Unknown mock scenario "${id}"`)
+  return id
+}
+
+export function applyScenario(id: ScenarioId): void {
+  resetNetworkState()
+  setActiveScenarioId(id)
+  if (id === 'empty-catalog' || loadDb().nfts.length === 0) resetDb(id)
+}
+
 export function createMockControl(): MockControl {
   return {
-    getScenario() {
-      return getActiveScenarioId()
+    getScenario: getActiveScenarioId,
+    getScenarios: () => SCENARIOS,
+    async setScenario(id) {
+      applyScenario(toScenarioId(id))
+      window.location.reload()
     },
-    getScenarios() {
-      return SCENARIOS
-    },
-    async setScenario(id: string) {
+    async reset(id) {
       resetNetworkState()
-      setActiveScenarioId(id)
+      resetDb(id === undefined ? undefined : toScenarioId(id))
+      window.location.reload()
+    },
+    setRules: setCustomNetworkRules,
+    clearRules: clearCustomNetworkRules,
+    hold: holdMatchingRequest,
+    release: releaseRequestGate,
+    changeEdition({ nftId, editionId, price, available }) {
       const db = loadDb()
-      if (id === 'empty-catalog') {
-        resetDb(id)
-      } else if (db.nfts.length === 0) {
-        resetDb(id)
-      }
-      if (typeof window !== 'undefined') {
-        window.location.reload()
-      }
-    },
-    async reset(id?: string) {
-      resetNetworkState()
-      resetDb(id)
-      if (typeof window !== 'undefined') {
-        window.location.reload()
-      }
-    },
-    setRules(rules: NetworkRule[]) {
-      setCustomNetworkRules(rules)
-    },
-    clearRules() {
-      clearCustomNetworkRules()
-    },
-    hold(match: NetworkRule['match']) {
-      return holdMatchingRequest(match)
-    },
-    release(gate: string) {
-      releaseRequestGate(gate)
-    },
-    changeEdition(input) {
-      const db = loadDb()
-      const updated = changeNftEdition(db, input)
+      const nft = changeNftEdition(db, getNftById(db, nftId), {
+        editionId,
+        price: price === undefined ? undefined : EthAmountSchema.parse(price),
+        available,
+      })
       saveDb()
-      broadcastNftUpdated(updated)
+      broadcastNftUpdated(nft)
     },
     resolveOrder(orderId, status) {
       const db = loadDb()
@@ -103,36 +103,22 @@ export function createMockControl(): MockControl {
         status,
         status === 'rejected' ? 'insufficient_funds' : null,
       )
-      if (result) {
-        saveDb()
-        for (const nft of result.mutatedNfts) {
-          broadcastNftUpdated(nft)
-        }
-        broadcastOrderUpdated(result.order)
-      }
+      if (!result) return
+      saveDb()
+      result.mutatedNfts.forEach(broadcastNftUpdated)
+      broadcastOrderUpdated(result.order)
     },
-    emitRaw(event) {
-      emitRawRealtimeEvent(event)
-    },
-    dropSockets(opts) {
-      dropAllSockets(opts)
-    },
+    emitRaw: emitRawRealtimeEvent,
+    dropSockets: dropAllSockets,
     expireSession() {
-      const db = loadDb()
-      expireActiveSessions(db)
+      expireActiveSessions(loadDb())
       saveDb()
     },
-    countOrders(userId: string) {
-      const db = loadDb()
-      return Object.values(db.orders).filter(
-        (o) => o.userId === userId && !o.id.startsWith('order-seed-'),
+    // Seeded history is left out, so a test can assert "exactly one new order".
+    countOrders(userId) {
+      return Object.values(loadDb().orders).filter(
+        (order) => order.userId === userId && !order.id.startsWith('order-seed-'),
       ).length
     },
-  }
-}
-
-declare global {
-  interface Window {
-    __mock?: MockControl
   }
 }

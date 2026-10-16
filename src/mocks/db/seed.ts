@@ -1,9 +1,9 @@
 import type { Edition, NetworkId, Nft, Order, Wallet } from '@/contracts'
-import { compareEth } from '@/lib/eth'
+import { computePriceFrom } from '@/mocks/domain/inventory'
 import type { CouponRecord, MockDb, MockUserRecord } from './schema'
 
 export const SEED_REFERENCE_DATE = '2026-10-15T12:00:00.000Z'
-export const MOCK_DB_SCHEMA_VERSION = 1
+export const MOCK_DB_SCHEMA_VERSION = 2
 
 export const MARINA_PASSWORD_SALT = 'kurio-salt-marina-v1'
 export const MARINA_PASSWORD_HASH =
@@ -48,17 +48,28 @@ function buildImages(art: (typeof ARTS)[number], title: string, collectionName: 
   }))
 }
 
-export function computePriceFrom(editions: Edition[], fallbackPrice: string): string {
-  const available = editions.filter((ed) => ed.available > 0)
-  const source = available.length > 0 ? available : editions
-  if (source.length === 0) return fallbackPrice
-  let min = source[0]!.price
-  for (const ed of source) {
-    if (compareEth(ed.price, min) < 0) {
-      min = ed.price
-    }
+const EDITION_RULES = {
+  '1/1': { suffix: '1-1', supply: 1, maxPerOrder: 1 },
+  '1/10': { suffix: '1-10', supply: 10, maxPerOrder: 2 },
+  '1/50': { suffix: '1-50', supply: 50, maxPerOrder: 5 },
+  ABERTA: { suffix: 'open', supply: null, maxPerOrder: 5 },
+} as const
+
+function edition(
+  nftId: string,
+  name: keyof typeof EDITION_RULES,
+  price: string,
+  available: number,
+): Edition {
+  const rule = EDITION_RULES[name]
+  return {
+    id: `${nftId}-${rule.suffix}`,
+    name,
+    price,
+    supply: rule.supply,
+    available,
+    maxPerOrder: rule.maxPerOrder,
   }
-  return min
 }
 
 function makeStandardReviews() {
@@ -237,64 +248,15 @@ function buildSeedNfts(): Nft[] {
     const editions: Edition[] =
       item.id === 'emerald-ape-042'
         ? [
-            {
-              id: `${item.id}-1-50`,
-              name: '1/50',
-              price: '1.19',
-              supply: 50,
-              available: 12,
-              maxPerOrder: 5,
-            },
-            {
-              id: `${item.id}-1-10`,
-              name: '1/10',
-              price: '1.49',
-              supply: 10,
-              available: 2,
-              maxPerOrder: 2,
-            },
-            {
-              id: `${item.id}-1-1`,
-              name: '1/1',
-              price: '3.5',
-              supply: 1,
-              available: 0,
-              maxPerOrder: 1,
-            },
-            {
-              id: `${item.id}-open`,
-              name: 'ABERTA',
-              price: '1.19',
-              supply: null,
-              available: 40,
-              maxPerOrder: 5,
-            },
+            edition(item.id, '1/1', '3.5', 0),
+            edition(item.id, '1/10', '1.49', 2),
+            edition(item.id, '1/50', '1.19', 12),
+            edition(item.id, 'ABERTA', '1.19', 40),
           ]
         : [
-            {
-              id: `${item.id}-1-50`,
-              name: '1/50',
-              price: item.price,
-              supply: 50,
-              available: 12,
-              maxPerOrder: 5,
-            },
-            {
-              id: `${item.id}-1-10`,
-              name: '1/10',
-              price: item.price,
-              supply: 10,
-              available: 3,
-              maxPerOrder: 2,
-            },
-            {
-              id: `${item.id}-open`,
-              name: 'ABERTA',
-              price: item.price,
-              supply: null,
-              available: 25,
-              maxPerOrder: 5,
-            },
+            edition(item.id, '1/10', item.price, 3),
+            edition(item.id, '1/50', item.price, 12),
+            edition(item.id, 'ABERTA', item.price, 25),
           ]
 
     const networkDisplay =
@@ -339,7 +301,7 @@ function buildSeedNfts(): Nft[] {
       compareAtPrice: item.compareAtPrice,
       images: buildImages(item.art, item.title, 'Kurio Apes'),
       editions,
-      priceFrom: computePriceFrom(editions, item.price),
+      priceFrom: computePriceFrom(editions),
       version: 1,
     })
   }
@@ -391,7 +353,7 @@ function buildSeedNfts(): Nft[] {
     'Obsidian Nomad',
     'Velvet Baron',
     'Solar Pulse',
-    'jade Drift',
+    'Jade Drift',
     'Amber Totem',
     'Cobalt Echo',
     'Lunar Relic',
@@ -407,20 +369,20 @@ function buildSeedNfts(): Nft[] {
     'Moss Circuit',
     'Opal Resonance',
     'Veridian Key',
-    'garnet Flux',
+    'Garnet Flux',
     'Ivory Beacon',
     'Topaz Guard',
     'Indigo Drifter',
     'Bronze Matrix',
     'Scarlet Node',
-    'celadon Wave',
+    'Celadon Wave',
     'Umber Glyph',
     'Gold Horizon',
     'Slate Archive',
     'Ruby Fragment',
     'Cyan Artifact',
-    'ochre Ritual',
-    ' basalt Idol',
+    'Ochre Ritual',
+    'Basalt Idol',
     'Silver Bloom',
     'Plume Sovereign',
     'Coral Zenith',
@@ -435,12 +397,13 @@ function buildSeedNfts(): Nft[] {
     const category = CATEGORIES[orderNum % CATEGORIES.length]!
     const network = NETWORKS[orderNum % NETWORKS.length]!
     const price = extraPrices[idx]!
-    const tokenNum = (200 + orderNum * 7).toString().padStart(4, '0')
-    const rawTitle = extraNames[idx]!.trim()
-    const formattedTitle = rawTitle.charAt(0).toUpperCase() + rawTitle.slice(1) + ` #${tokenNum}`
+    const serial = 200 + orderNum * 7
+    const tokenNum = serial.toString().padStart(4, '0')
+    const formattedTitle = `${extraNames[idx]!} #${serial.toString().padStart(3, '0')}`
     const id = `kurio-nft-${orderNum}`
 
-    const daysAgo = idx < 8 ? idx + 2 : idx + 15
+    // The nine Figma NFTs span the last 4 days and must stay first in "recent".
+    const daysAgo = idx < 8 ? idx + 5 : idx + 15
     const createdAt = new Date(baseTimeMs - daysAgo * 86_400_000).toISOString()
 
     const featured = idx === 0 || idx === 1
@@ -450,24 +413,21 @@ function buildSeedNfts(): Nft[] {
     const isLowStock = idx % 7 === 0
     const isSoldOut = idx === 38
 
-    const editions: Edition[] = [
-      {
-        id: `${id}-1-50`,
-        name: '1/50',
-        price,
-        supply: 50,
-        available: isSoldOut ? 0 : isLowStock ? 1 : 12,
-        maxPerOrder: 5,
-      },
-      {
-        id: `${id}-1-10`,
-        name: '1/10',
-        price,
-        supply: 10,
-        available: isSoldOut ? 0 : 2,
-        maxPerOrder: 2,
-      },
+    const stock = (units: number) => (isSoldOut ? 0 : units)
+    const editionsByVariant: Edition[][] = [
+      [edition(id, '1/1', price, stock(1))],
+      [
+        edition(id, '1/10', price, stock(2)),
+        edition(id, '1/50', price, stock(isLowStock ? 1 : 12)),
+      ],
+      [
+        edition(id, '1/10', price, stock(2)),
+        edition(id, '1/50', price, stock(isLowStock ? 1 : 12)),
+        edition(id, 'ABERTA', price, stock(30)),
+      ],
+      [edition(id, '1/50', price, stock(isLowStock ? 1 : 12))],
     ]
+    const editions = editionsByVariant[idx % editionsByVariant.length]!
 
     const networkDisplay =
       network === 'ethereum' ? 'Ethereum' : network === 'polygon' ? 'Polygon' : 'Solana'
@@ -505,7 +465,7 @@ function buildSeedNfts(): Nft[] {
       compareAtPrice: idx % 5 === 0 ? '2.5' : null,
       images: buildImages(art, formattedTitle, collection.name),
       editions,
-      priceFrom: computePriceFrom(editions, price),
+      priceFrom: computePriceFrom(editions),
       version: 1,
     })
   }
@@ -513,8 +473,8 @@ function buildSeedNfts(): Nft[] {
   return nfts
 }
 
-export function createSeedDb(scenarioId = 'default'): MockDb {
-  const nfts = scenarioId === 'empty-catalog' ? [] : buildSeedNfts()
+export function createSeedDb(options: { emptyCatalog?: boolean } = {}): MockDb {
+  const nfts = options.emptyCatalog ? [] : buildSeedNfts()
 
   const users: MockUserRecord[] = [
     {
@@ -643,7 +603,6 @@ export function createSeedDb(scenarioId = 'default'): MockDb {
 
   return {
     schemaVersion: MOCK_DB_SCHEMA_VERSION,
-    scenarioId,
     nfts,
     users,
     sessions: [],
@@ -656,6 +615,7 @@ export function createSeedDb(scenarioId = 'default'): MockDb {
     orders: {
       [seedOrderMarina.id]: seedOrderMarina,
     },
+    settlements: {},
     walletsByUser: {
       'user-marina': marinaWallets,
       'user-rafael': [],
@@ -663,7 +623,6 @@ export function createSeedDb(scenarioId = 'default'): MockDb {
     walletConnections: {},
     idempotencyKeys: {},
     coupons,
-    priceChangeTriggeredByCart: {},
-    soldOutTriggeredByCart: {},
+    scenarioMarks: {},
   }
 }

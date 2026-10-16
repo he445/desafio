@@ -6,10 +6,16 @@ import {
   type UserSummary,
 } from '@/contracts'
 import type { MockDb, MockSessionRecord, MockUserRecord } from '@/mocks/db/schema'
+import { assertEmailAvailable, assertUsernameAvailable } from './account'
 import { hashPassword, verifyPassword } from './crypto'
 import { MockHttpError } from './errors'
 
-const RESERVED_USERNAMES = new Set(['admin', 'root', 'support', 'kurio'])
+export const DEFAULT_SESSION_TTL_MS = 24 * 3600_000
+
+export interface SessionOptions {
+  now?: number
+  ttlMs?: number
+}
 
 export function toUserSummary(user: MockUserRecord): UserSummary {
   return {
@@ -21,8 +27,11 @@ export function toUserSummary(user: MockUserRecord): UserSummary {
   }
 }
 
-function createSessionRecord(db: MockDb, userId: string, now = Date.now()): MockSessionRecord {
-  const ttlMs = db.scenarioId === 'session-expired' ? 60_000 : 24 * 3600_000
+function createSessionRecord(
+  db: MockDb,
+  userId: string,
+  { now = Date.now(), ttlMs = DEFAULT_SESSION_TTL_MS }: SessionOptions,
+): MockSessionRecord {
   const session: MockSessionRecord = {
     token: `kurio-tok-${crypto.randomUUID()}`,
     userId,
@@ -32,73 +41,56 @@ function createSessionRecord(db: MockDb, userId: string, now = Date.now()): Mock
   return session
 }
 
+function createReferralCode(db: MockDb): string {
+  let code: string
+  do {
+    code = `KURIO-${crypto.randomUUID().replace(/-/g, '').slice(0, 4).toUpperCase()}`
+  } while (db.users.some((user) => user.referralCode === code))
+  return code
+}
+
 export async function registerUser(
   db: MockDb,
   input: RegisterInput,
-  now = Date.now(),
+  options: SessionOptions = {},
 ): Promise<AuthResponse> {
-  const normalizedEmail = input.email.trim().toLowerCase()
-  const normalizedUsername = input.username.trim()
-
-  if (db.users.some((u) => u.email.toLowerCase() === normalizedEmail)) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'EMAIL_TAKEN',
-      message: VALIDATION_MESSAGES.emailTaken,
-      fieldErrors: { email: [VALIDATION_MESSAGES.emailTaken] },
-    })
-  }
-
-  if (
-    RESERVED_USERNAMES.has(normalizedUsername.toLowerCase()) ||
-    db.users.some((u) => u.username.toLowerCase() === normalizedUsername.toLowerCase())
-  ) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'USERNAME_TAKEN',
-      message: VALIDATION_MESSAGES.usernameTaken,
-      fieldErrors: { username: [VALIDATION_MESSAGES.usernameTaken] },
-    })
-  }
+  const email = input.email.trim().toLowerCase()
+  const username = input.username.trim()
+  assertEmailAvailable(db, email)
+  assertUsernameAvailable(db, username)
 
   const salt = `kurio-salt-${crypto.randomUUID()}`
-  const passwordHash = await hashPassword(input.password, salt)
-  const suffix = Math.floor(1000 + (db.users.length + 1) * 1111)
-    .toString()
-    .slice(0, 4)
-
-  const newUser: MockUserRecord = {
+  const user: MockUserRecord = {
     id: `user-${crypto.randomUUID().slice(0, 8)}`,
-    username: normalizedUsername,
-    displayName: normalizedUsername,
-    email: normalizedEmail,
+    username,
+    displayName: username,
+    email,
     ensName: null,
-    walletNickname: `Carteira ${normalizedUsername}`,
+    walletNickname: `Carteira ${username}`,
     avatarUrl: null,
-    referralCode: `KURIO-${suffix}`,
+    referralCode: createReferralCode(db),
     passwordSalt: salt,
-    passwordHash,
+    passwordHash: await hashPassword(input.password, salt),
   }
 
-  db.users.push(newUser)
-  db.favoritesByUser[newUser.id] = []
-  db.walletsByUser[newUser.id] = []
+  db.users.push(user)
+  db.favoritesByUser[user.id] = []
+  db.walletsByUser[user.id] = []
 
-  const session = createSessionRecord(db, newUser.id, now)
-  return {
-    user: toUserSummary(newUser),
-    session,
-  }
+  return { user: toUserSummary(user), session: createSessionRecord(db, user.id, options) }
 }
 
 export async function loginUser(
   db: MockDb,
   input: LoginInput,
-  now = Date.now(),
+  options: SessionOptions = {},
 ): Promise<AuthResponse> {
-  const normalizedEmail = input.email.trim().toLowerCase()
-  const user = db.users.find((u) => u.email.toLowerCase() === normalizedEmail)
-  if (!user) {
+  const email = input.email.trim().toLowerCase()
+  const user = db.users.find((candidate) => candidate.email.toLowerCase() === email)
+  const valid = user
+    ? await verifyPassword(input.password, user.passwordSalt, user.passwordHash)
+    : false
+  if (!user || !valid) {
     throw new MockHttpError({
       status: 401,
       code: 'INVALID_CREDENTIALS',
@@ -106,20 +98,11 @@ export async function loginUser(
     })
   }
 
-  const valid = await verifyPassword(input.password, user.passwordSalt, user.passwordHash)
-  if (!valid) {
-    throw new MockHttpError({
-      status: 401,
-      code: 'INVALID_CREDENTIALS',
-      message: VALIDATION_MESSAGES.invalidCredentials,
-    })
-  }
+  return { user: toUserSummary(user), session: createSessionRecord(db, user.id, options) }
+}
 
-  const session = createSessionRecord(db, user.id, now)
-  return {
-    user: toUserSummary(user),
-    session,
-  }
+function readBearerToken(authHeader: string | null | undefined): string | null {
+  return authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() || null : null
 }
 
 export function getAuthenticatedUser(
@@ -127,21 +110,14 @@ export function getAuthenticatedUser(
   authHeader: string | null | undefined,
   now = Date.now(),
 ): { user: MockUserRecord; session: MockSessionRecord } {
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
-  if (!token) {
+  const token = readBearerToken(authHeader)
+  const session = token ? db.sessions.find((candidate) => candidate.token === token) : undefined
+  const user = session ? db.users.find((candidate) => candidate.id === session.userId) : undefined
+  if (!session || !user) {
     throw new MockHttpError({
       status: 401,
       code: 'UNAUTHENTICATED',
       message: 'Autenticação necessária.',
-    })
-  }
-
-  const session = db.sessions.find((s) => s.token === token)
-  if (!session) {
-    throw new MockHttpError({
-      status: 401,
-      code: 'UNAUTHENTICATED',
-      message: 'Sessão inválida.',
     })
   }
 
@@ -153,26 +129,22 @@ export function getAuthenticatedUser(
     })
   }
 
-  const user = db.users.find((u) => u.id === session.userId)
-  if (!user) {
-    throw new MockHttpError({
-      status: 401,
-      code: 'UNAUTHENTICATED',
-      message: 'Usuário não encontrado.',
-    })
-  }
-
   return { user, session }
 }
 
-export function logoutSession(db: MockDb, authHeader: string | null | undefined): void {
-  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() : null
-  if (!token) return
-  db.sessions = db.sessions.filter((s) => s.token !== token)
+export function findSessionUserId(db: MockDb, token: string | undefined, now = Date.now()) {
+  const session = db.sessions.find((candidate) => candidate.token === token)
+  return session && new Date(session.expiresAt).getTime() > now ? session.userId : null
 }
 
-export function expireActiveSessions(db: MockDb): void {
-  const past = new Date(Date.now() - 60_000).toISOString()
+export function logoutSession(db: MockDb, authHeader: string | null | undefined): void {
+  const token = readBearerToken(authHeader)
+  if (!token) return
+  db.sessions = db.sessions.filter((session) => session.token !== token)
+}
+
+export function expireActiveSessions(db: MockDb, now = Date.now()): void {
+  const past = new Date(now - 60_000).toISOString()
   for (const session of db.sessions) {
     session.expiresAt = past
   }

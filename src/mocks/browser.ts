@@ -1,45 +1,31 @@
 import { setupWorker } from 'msw/browser'
-import { createMockControl } from './control'
-import { loadDb, resetDb, setActiveScenarioId } from './db/store'
+import { applyScenario, createMockControl } from './control'
+import { loadDb, resetDb } from './db/store'
 import { handlers } from './handlers'
 import { realtimeWsHandler } from './realtime/server'
-import { resetNetworkState } from './scenarios'
+import { resumeSettlements } from './realtime/settlements'
+import { resetNetworkState } from './scenarios/network'
+import { isScenarioId } from './scenarios/registry'
 
 export const worker = setupWorker(...handlers, realtimeWsHandler)
 
 function applyBootUrlParams(): void {
-  if (typeof window === 'undefined') return
   const url = new URL(window.location.href)
-  const scenarioParam = url.searchParams.get('scenario')
-  const resetParam = url.searchParams.get('reset')
-  let mutatedUrl = false
+  const scenario = url.searchParams.get('scenario')
+  const reset = url.searchParams.get('reset') === '1'
+  if (!reset && scenario === null) return
 
-  if (resetParam === '1') {
+  const scenarioId = isScenarioId(scenario) ? scenario : undefined
+  if (reset) {
     resetNetworkState()
-    resetDb(scenarioParam ?? undefined)
-    url.searchParams.delete('reset')
-    if (scenarioParam) {
-      url.searchParams.delete('scenario')
-    }
-    mutatedUrl = true
-  } else if (scenarioParam) {
-    resetNetworkState()
-    setActiveScenarioId(scenarioParam)
-    const db = loadDb()
-    if (scenarioParam === 'empty-catalog' || db.nfts.length === 0) {
-      resetDb(scenarioParam)
-    }
-    url.searchParams.delete('scenario')
-    mutatedUrl = true
+    resetDb(scenarioId)
+  } else if (scenarioId) {
+    applyScenario(scenarioId)
   }
 
-  if (mutatedUrl) {
-    const nextUrl =
-      url.pathname +
-      (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '') +
-      url.hash
-    window.history.replaceState(window.history.state, '', nextUrl)
-  }
+  url.searchParams.delete('scenario')
+  url.searchParams.delete('reset')
+  window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
 export async function startMocks(): Promise<void> {
@@ -47,17 +33,13 @@ export async function startMocks(): Promise<void> {
   loadDb()
 
   await worker.start({
-    quiet: true,
+    quiet: import.meta.env.PROD,
     onUnhandledRequest(request, print) {
-      const url = new URL(request.url)
-      if (url.pathname.startsWith('/api/')) {
-        print.error()
-      }
+      if (new URL(request.url).pathname.startsWith('/api/')) print.error()
     },
   })
 
-  if (typeof window !== 'undefined') {
-    window.__mock = createMockControl()
-    document.documentElement.dataset.mocks = 'ready'
-  }
+  resumeSettlements()
+  window.__mock = createMockControl()
+  document.documentElement.dataset.mocks = 'ready'
 }

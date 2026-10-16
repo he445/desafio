@@ -2,13 +2,14 @@ import {
   CatalogSearchSchema,
   type CatalogFacets,
   type CatalogSearch,
+  type CatalogSort,
   type EthAmount,
   type Nft,
   type NftListResponse,
 } from '@/contracts'
 import { compareEth } from '@/lib/eth'
 import type { MockDb } from '@/mocks/db/schema'
-import { computePriceFrom, SEED_REFERENCE_DATE } from '@/mocks/db/seed'
+import { SEED_REFERENCE_DATE } from '@/mocks/db/seed'
 import { MockHttpError } from './errors'
 
 const FEATURED_ORDER = ['emerald-ape-042', 'ivory-baron-088', 'golden-beat-207', 'sage-nomad-009']
@@ -111,27 +112,26 @@ function buildFacets(allNfts: Nft[], search: CatalogSearch): CatalogFacets {
   }
 }
 
+function compareBySort(sort: CatalogSort, a: Nft, b: Nft): number {
+  switch (sort) {
+    case 'price_asc':
+      return compareEth(a.priceFrom, b.priceFrom)
+    case 'price_desc':
+      return compareEth(b.priceFrom, a.priceFrom)
+    case 'title_asc':
+      return a.title.localeCompare(b.title, 'pt-BR')
+    case 'recent':
+      return Date.parse(b.createdAt) - Date.parse(a.createdAt)
+  }
+}
+
 export function queryNfts(db: MockDb, rawQuery: Record<string, unknown>): NftListResponse {
   const query = CatalogSearchSchema.parse(rawQuery)
   const filtered = db.nfts.filter((nft) => matchesBaseFilters(nft, query))
 
-  const sorted = [...filtered].sort((a, b) => {
-    switch (query.sort) {
-      case 'price_asc': {
-        const cmp = compareEth(a.priceFrom, b.priceFrom)
-        return cmp !== 0 ? cmp : a.id.localeCompare(b.id)
-      }
-      case 'price_desc': {
-        const cmp = compareEth(b.priceFrom, a.priceFrom)
-        return cmp !== 0 ? cmp : a.id.localeCompare(b.id)
-      }
-      case 'title_asc':
-        return a.title.localeCompare(b.title, 'pt-BR')
-      case 'recent':
-      default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    }
-  })
+  const sorted = [...filtered].sort(
+    (a, b) => compareBySort(query.sort, a, b) || a.id.localeCompare(b.id),
+  )
 
   const total = sorted.length
   const totalPages = Math.max(1, Math.ceil(total / query.pageSize))
@@ -171,55 +171,5 @@ export function getNftById(db: MockDb, id: string): Nft {
       message: 'NFT não encontrado.',
     })
   }
-  return nft
-}
-
-export function changeNftEdition(
-  db: MockDb,
-  params: {
-    nftId: string
-    editionId: string
-    price?: EthAmount
-    available?: number
-  },
-): Nft {
-  const nft = getNftById(db, params.nftId)
-  const edition = nft.editions.find((ed) => ed.id === params.editionId)
-  if (!edition) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Edição não encontrada.',
-    })
-  }
-
-  if (params.price !== undefined) {
-    edition.price = params.price
-  }
-  if (params.available !== undefined) {
-    edition.available = Math.max(0, Math.trunc(params.available))
-  }
-
-  nft.priceFrom = computePriceFrom(nft.editions, edition.price)
-  nft.version += 1
-
-  for (const cart of Object.values(db.carts)) {
-    let touched = false
-    for (const item of cart.items) {
-      if (item.nftId === nft.id && item.editionId === edition.id) {
-        item.unitPrice = edition.price
-        item.available = edition.available
-        item.nftVersion = nft.version
-        touched = true
-      } else if (item.nftId === nft.id) {
-        item.nftVersion = nft.version
-        touched = true
-      }
-    }
-    if (touched) {
-      cart.version += 1
-    }
-  }
-
   return nft
 }

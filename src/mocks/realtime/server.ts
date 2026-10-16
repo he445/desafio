@@ -1,7 +1,9 @@
 import { ws } from 'msw'
 import { toSocketIo } from '@mswjs/socket.io-binding'
 import type { Nft, Order, RealtimeEvent } from '@/contracts'
-import { getActiveScenarioId, loadDb } from '@/mocks/db/store'
+import { loadDb } from '@/mocks/db/store'
+import { findSessionUserId } from '@/mocks/domain/session'
+import { getActiveScenarioId } from '@/mocks/scenarios/registry'
 
 const socketUrl = import.meta.env.VITE_SOCKET_URL || 'wss://realtime.nft-market.test'
 const realtimeLink = ws.link(socketUrl)
@@ -15,16 +17,6 @@ interface TrackedConnection {
 
 const activeConnections = new Map<string, TrackedConnection>()
 let refuseConnectionsUntil = 0
-
-function resolveUserIdFromToken(token: string | undefined): string | null {
-  if (!token) return null
-  const db = loadDb()
-  const now = Date.now()
-  const session = db.sessions.find(
-    (s) => s.token === token && new Date(s.expiresAt).getTime() > now,
-  )
-  return session?.userId ?? null
-}
 
 export const realtimeWsHandler = realtimeLink.addEventListener('connection', (connection) => {
   const scenarioId = getActiveScenarioId()
@@ -49,20 +41,20 @@ export const realtimeWsHandler = realtimeLink.addEventListener('connection', (co
 
   activeConnections.set(connectionId, tracked)
 
+  // The binding acknowledges CONNECT before exposing `auth`, so the token is read from the raw
+  // Socket.IO packet (40{"token":"…"}). Without a valid token the connection stays anonymous.
   connection.client.addEventListener('message', (event) => {
-    if (typeof event.data === 'string' && event.data.startsWith('40')) {
-      const jsonPart = event.data.slice(2)
-      if (jsonPart.startsWith('{')) {
-        try {
-          const parsed = JSON.parse(jsonPart) as { token?: string }
-          tracked.userId = resolveUserIdFromToken(parsed.token)
-        } catch {
-          tracked.userId = null
-        }
-      }
+    if (typeof event.data !== 'string' || !event.data.startsWith('40{')) return
+    try {
+      const { token } = JSON.parse(event.data.slice(2)) as { token?: unknown }
+      tracked.userId = typeof token === 'string' ? findSessionUserId(loadDb(), token) : null
+    } catch {
+      tracked.userId = null
     }
   })
 
+  // The binding announces pingInterval 25 s but never pings; without this the client closes
+  // the socket with "ping timeout" after 30 s.
   const pingTimer = setInterval(() => {
     try {
       connection.client.send('2')

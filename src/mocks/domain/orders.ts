@@ -1,41 +1,46 @@
 import type {
   CreateOrderInput,
+  NetworkId,
   Nft,
   Order,
   OrderReceiptLine,
   OrderRejectionReason,
-  OrderStatus,
+  Quote,
   WalletConnectionInput,
   WalletConnectionResponse,
 } from '@/contracts'
-import { addEth } from '@/lib/eth'
-import type { MockDb } from '@/mocks/db/schema'
-import { computePriceFrom } from '@/mocks/db/seed'
-import { changeNftEdition, getNftById } from './catalog'
-import { createQuoteForCart, getOrCreateCart } from './cart'
+import { compareEth } from '@/lib/eth'
+import type { MockDb, SettlementRecord } from '@/mocks/db/schema'
+import { createQuoteForCart, getOrCreateCart, NETWORK_FEES, resolveCouponDiscount } from './cart'
+import { getNftById } from './catalog'
 import { sha256Hex } from './crypto'
 import { MockHttpError } from './errors'
+import { adjustStock, findEdition } from './inventory'
+
+export const IDEMPOTENCY_TTL_MS = 24 * 3600_000
+
+const EXPLORER_TX_URL: Record<NetworkId, string> = {
+  ethereum: 'https://etherscan.io/tx/',
+  polygon: 'https://polygonscan.com/tx/',
+  solana: 'https://solscan.io/tx/',
+}
 
 export function createWalletConnection(
   db: MockDb,
   userId: string,
   input: WalletConnectionInput,
 ): WalletConnectionResponse {
-  if (db.scenarioId === 'wallet-rejected') {
-    throw new MockHttpError({
-      status: 409,
-      code: 'WALLET_REJECTED',
-      message: 'A conexão foi recusada na carteira.',
-    })
-  }
-
-  const wallets = db.walletsByUser[userId] ?? []
-  const wallet = wallets.find((w) => w.id === input.walletId)
+  const wallet = (db.walletsByUser[userId] ?? []).find((item) => item.id === input.walletId)
   if (!wallet) {
+    throw new MockHttpError({ status: 404, code: 'NOT_FOUND', message: 'Carteira não encontrada.' })
+  }
+  if (wallet.network !== input.network) {
+    const message = 'Esta carteira é de outra rede.'
     throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Carteira não encontrada.',
+      status: 422,
+      code: 'VALIDATION_FAILED',
+      message,
+      fieldErrors: { network: [message] },
     })
   }
 
@@ -48,7 +53,6 @@ export function createWalletConnection(
     provider: input.provider,
     status: 'connected',
   }
-
   return {
     connectionId,
     walletId: wallet.id,
@@ -58,8 +62,81 @@ export function createWalletConnection(
   }
 }
 
-export function deleteWalletConnection(db: MockDb, connectionId: string): void {
+export function deleteWalletConnection(db: MockDb, userId: string, connectionId: string): void {
+  const connection = db.walletConnections[connectionId]
+  if (!connection) return
+  if (connection.userId !== userId) {
+    throw new MockHttpError({
+      status: 403,
+      code: 'FORBIDDEN',
+      message: 'Esta conexão pertence a outro usuário.',
+    })
+  }
   delete db.walletConnections[connectionId]
+}
+
+export function dropWalletConnection(db: MockDb, connectionId: string): void {
+  const connection = db.walletConnections[connectionId]
+  if (connection) connection.status = 'disconnected'
+}
+
+function quoteOutdated(
+  db: MockDb,
+  userId: string,
+  network: NetworkId,
+  message: string,
+  now: number,
+): MockHttpError {
+  const cart = getOrCreateCart(db, { kind: 'user', userId })
+  const details =
+    cart.items.length > 0
+      ? { quote: createQuoteForCart(db, { kind: 'user', userId }, network, undefined, now) }
+      : {}
+  return new MockHttpError({ status: 409, code: 'QUOTE_OUTDATED', message, details })
+}
+
+function assertQuoteStillValid(
+  db: MockDb,
+  userId: string,
+  quote: Quote,
+  network: NetworkId,
+  now: number,
+): void {
+  const outdated = (message: string) => quoteOutdated(db, userId, network, message, now)
+  const cart = getOrCreateCart(db, { kind: 'user', userId })
+
+  if (Date.parse(quote.expiresAt) <= now) throw outdated('A cotação expirou. Revise os valores.')
+  if (network !== quote.network) throw outdated('A carteira conectada é de outra rede.')
+  if (cart.couponCode !== quote.couponCode) throw outdated('O cupom do carrinho mudou.')
+  if (compareEth(NETWORK_FEES[quote.network], quote.networkFee) !== 0) {
+    throw outdated('A taxa de rede mudou.')
+  }
+
+  for (const line of quote.lines) {
+    const item = cart.items.find((candidate) => candidate.editionId === line.editionId)
+    const nft = db.nfts.find((candidate) => candidate.id === line.nftId)
+    const edition = nft?.editions.find((candidate) => candidate.id === line.editionId)
+    if (!item || item.quantity < line.quantity || !nft || !edition) {
+      throw outdated('Os itens do carrinho foram alterados.')
+    }
+    if (edition.available < line.quantity) {
+      throw new MockHttpError({
+        status: 409,
+        code: 'AVAILABILITY_CONFLICT',
+        message: `Estoque insuficiente para ${nft.title}.`,
+        details: { nftId: nft.id, editionId: edition.id },
+      })
+    }
+    if (compareEth(edition.price, line.unitPrice) !== 0 || nft.version !== line.nftVersion) {
+      item.unitPriceWhenAdded = edition.price
+      throw outdated('Os valores mudaram desde a última cotação.')
+    }
+  }
+
+  const coupon = resolveCouponDiscount(db, quote.couponCode, quote.subtotal, now)
+  if (coupon.issue || compareEth(coupon.discount, quote.discount) !== 0) {
+    throw outdated('O cupom não vale mais para esta compra.')
+  }
 }
 
 export async function createOrderFromQuote(
@@ -68,11 +145,7 @@ export async function createOrderFromQuote(
   idempotencyKey: string | null | undefined,
   input: CreateOrderInput,
   now = Date.now(),
-): Promise<{
-  order: Order
-  reused: boolean
-  mutatedNfts: Nft[]
-}> {
+): Promise<{ order: Order; reused: boolean; mutatedNfts: Nft[] }> {
   const key = idempotencyKey?.trim()
   if (!key) {
     throw new MockHttpError({
@@ -82,29 +155,25 @@ export async function createOrderFromQuote(
     })
   }
 
-  const canonicalBody = JSON.stringify({
-    quoteId: input.quoteId,
-    connectionId: input.connectionId,
-    buyer: input.buyer,
-  })
-  const bodyHash = await sha256Hex(canonicalBody)
-
-  const existingIdempotency = db.idempotencyKeys[`${userId}:${key}`]
-  if (existingIdempotency) {
-    const ageMs = now - new Date(existingIdempotency.createdAt).getTime()
-    if (ageMs < 24 * 3600_000) {
-      if (existingIdempotency.bodyHash !== bodyHash) {
-        throw new MockHttpError({
-          status: 409,
-          code: 'IDEMPOTENCY_KEY_REUSED',
-          message: 'A mesma chave de idempotência não pode ser reutilizada com outro pedido.',
-        })
-      }
-      const existingOrder = db.orders[existingIdempotency.orderId]
-      if (existingOrder) {
-        return { order: existingOrder, reused: true, mutatedNfts: [] }
-      }
+  const bodyHash = await sha256Hex(
+    JSON.stringify({
+      quoteId: input.quoteId,
+      connectionId: input.connectionId,
+      buyer: input.buyer,
+    }),
+  )
+  const recordKey = `${userId}:${key}`
+  const previous = db.idempotencyKeys[recordKey]
+  if (previous && now - Date.parse(previous.createdAt) < IDEMPOTENCY_TTL_MS) {
+    if (previous.bodyHash !== bodyHash) {
+      throw new MockHttpError({
+        status: 409,
+        code: 'IDEMPOTENCY_KEY_REUSED',
+        message: 'A mesma chave de idempotência não pode ser reutilizada com outro pedido.',
+      })
     }
+    const existing = db.orders[previous.orderId]
+    if (existing) return { order: existing, reused: true, mutatedNfts: [] }
   }
 
   const connection = db.walletConnections[input.connectionId]
@@ -116,183 +185,37 @@ export async function createOrderFromQuote(
     })
   }
 
-  if (db.scenarioId === 'wallet-disconnect') {
-    connection.status = 'disconnected'
-    throw new MockHttpError({
-      status: 409,
-      code: 'WALLET_DISCONNECTED',
-      message: 'A conexão com a carteira caiu antes do envio. Reconecte para continuar.',
-    })
-  }
-
   const quote = db.quotes[input.quoteId]
   if (!quote) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'QUOTE_OUTDATED',
-      message: 'Cotação não encontrada ou expirada. Revise a nova cotação.',
-    })
+    throw quoteOutdated(db, userId, connection.network, 'Cotação não encontrada.', now)
   }
+  assertQuoteStillValid(db, userId, quote, connection.network, now)
 
   const cart = getOrCreateCart(db, { kind: 'user', userId })
-  const firstLine = quote.lines[0]
-
-  if (
-    db.scenarioId === 'price-change-checkout' &&
-    firstLine &&
-    !db.priceChangeTriggeredByCart[cart.id]
-  ) {
-    db.priceChangeTriggeredByCart[cart.id] = true
-    const nft = getNftById(db, firstLine.nftId)
-    const edition = nft.editions.find((ed) => ed.id === firstLine.editionId)
-    if (edition) {
-      const nextPrice = addEth(edition.price, '0.15')
-      const updatedNft = changeNftEdition(db, {
-        nftId: nft.id,
-        editionId: edition.id,
-        price: nextPrice,
-      })
-      for (const ci of cart.items) {
-        if (ci.nftId === nft.id && ci.editionId === edition.id) {
-          ci.unitPriceWhenAdded = nextPrice
-        }
-      }
-      const freshQuote = createQuoteForCart(
-        db,
-        { kind: 'user', userId },
-        quote.network,
-        undefined,
-        now,
-      )
-      throw new MockHttpError({
-        status: 409,
-        code: 'QUOTE_OUTDATED',
-        message: 'O preço de um item mudou. Revise e confirme a nova cotação.',
-        details: { quote: freshQuote, updatedNft },
-      })
-    }
-  }
-
-  if (db.scenarioId === 'sold-out-checkout' && firstLine && !db.soldOutTriggeredByCart[cart.id]) {
-    db.soldOutTriggeredByCart[cart.id] = true
-    const updatedNft = changeNftEdition(db, {
-      nftId: firstLine.nftId,
-      editionId: firstLine.editionId,
-      available: 0,
-    })
-    throw new MockHttpError({
-      status: 409,
-      code: 'AVAILABILITY_CONFLICT',
-      message: 'Uma das edições esgotou antes da confirmação.',
-      details: { nftId: firstLine.nftId, editionId: firstLine.editionId, updatedNft },
-    })
-  }
-
-  if (new Date(quote.expiresAt).getTime() <= now) {
-    const freshQuote = createQuoteForCart(
-      db,
-      { kind: 'user', userId },
-      quote.network,
-      undefined,
-      now,
-    )
-    throw new MockHttpError({
-      status: 409,
-      code: 'QUOTE_OUTDATED',
-      message: 'A cotação expirou. Revise os valores atualizados.',
-      details: { quote: freshQuote },
-    })
-  }
-
-  for (const qLine of quote.lines) {
-    const cartItem = cart.items.find(
-      (it) => it.nftId === qLine.nftId && it.editionId === qLine.editionId,
-    )
-    if (!cartItem || cartItem.quantity < qLine.quantity) {
-      const freshQuote = createQuoteForCart(
-        db,
-        { kind: 'user', userId },
-        quote.network,
-        undefined,
-        now,
-      )
-      throw new MockHttpError({
-        status: 409,
-        code: 'QUOTE_OUTDATED',
-        message: 'Os itens do carrinho foram alterados.',
-        details: { quote: freshQuote },
-      })
-    }
-
-    const nft = getNftById(db, qLine.nftId)
-    const edition = nft.editions.find((ed) => ed.id === qLine.editionId)
-    if (!edition || edition.available < qLine.quantity) {
-      throw new MockHttpError({
-        status: 409,
-        code: 'AVAILABILITY_CONFLICT',
-        message: `Estoque insuficiente para ${nft.title}.`,
-        details: { nftId: nft.id, editionId: qLine.editionId },
-      })
-    }
-
-    if (edition.price !== qLine.unitPrice || nft.version !== qLine.nftVersion) {
-      for (const ci of cart.items) {
-        if (ci.nftId === nft.id && ci.editionId === edition.id) {
-          ci.unitPriceWhenAdded = edition.price
-        }
-      }
-      const freshQuote = createQuoteForCart(
-        db,
-        { kind: 'user', userId },
-        quote.network,
-        undefined,
-        now,
-      )
-      throw new MockHttpError({
-        status: 409,
-        code: 'QUOTE_OUTDATED',
-        message: 'Os valores mudaram desde a última cotação. Revise a nova cotação.',
-        details: { quote: freshQuote },
-      })
-    }
-  }
-
   const receiptLines: OrderReceiptLine[] = []
-  const mutatedNfts: Nft[] = []
-
-  for (const qLine of quote.lines) {
-    const nft = getNftById(db, qLine.nftId)
-    const edition = nft.editions.find((ed) => ed.id === qLine.editionId)!
-    edition.available -= qLine.quantity
-    nft.priceFrom = computePriceFrom(nft.editions, edition.price)
-    nft.version += 1
-    mutatedNfts.push(nft)
-
+  const mutated = new Map<string, Nft>()
+  for (const line of quote.lines) {
+    const nft = getNftById(db, line.nftId)
+    const edition = findEdition(nft, line.editionId)
     receiptLines.push({
       nftId: nft.id,
       editionId: edition.id,
       title: nft.title,
       tokenId: nft.tokenId,
       editionName: edition.name,
-      image: nft.images[0]?.src ?? '/images/nfts/emerald-1.webp',
-      quantity: qLine.quantity,
-      unitPrice: qLine.unitPrice,
-      lineTotal: qLine.lineTotal,
+      image: nft.images[0]?.src ?? '',
+      quantity: line.quantity,
+      unitPrice: line.unitPrice,
+      lineTotal: line.lineTotal,
     })
+    mutated.set(nft.id, adjustStock(db, nft, edition.id, -line.quantity))
+    const item = cart.items.find((candidate) => candidate.editionId === edition.id)
+    if (item) item.unitPriceWhenAdded = item.unitPrice
   }
 
-  for (const ci of cart.items) {
-    const nft = db.nfts.find((n) => n.id === ci.nftId)
-    if (nft) {
-      ci.unitPriceWhenAdded = ci.unitPrice
-      ci.nftVersion = nft.version
-    }
-  }
-
-  const nowIso = new Date(now).toISOString()
-  const orderId = `order-${crypto.randomUUID().slice(0, 8)}`
+  const createdAt = new Date(now).toISOString()
   const order: Order = {
-    id: orderId,
+    id: `order-${crypto.randomUUID().slice(0, 8)}`,
     userId,
     status: 'pending',
     rejectionReason: null,
@@ -300,108 +223,99 @@ export async function createOrderFromQuote(
     walletId: connection.walletId,
     network: connection.network,
     provider: connection.provider,
-    receipt: JSON.parse(
-      JSON.stringify({
-        lines: receiptLines,
-        subtotal: quote.subtotal,
-        discount: quote.discount,
-        networkFee: quote.networkFee,
-        total: quote.total,
-        couponCode: quote.couponCode,
-      }),
-    ),
+    receipt: structuredClone({
+      lines: receiptLines,
+      subtotal: quote.subtotal,
+      discount: quote.discount,
+      networkFee: quote.networkFee,
+      total: quote.total,
+      couponCode: quote.couponCode,
+    }),
     transaction: null,
-    createdAt: nowIso,
-    updatedAt: nowIso,
+    createdAt,
+    updatedAt: createdAt,
     version: 1,
   }
 
   db.orders[order.id] = order
-  db.idempotencyKeys[`${userId}:${key}`] = {
-    key,
-    userId,
-    bodyHash,
-    orderId: order.id,
-    createdAt: nowIso,
-  }
+  db.idempotencyKeys[recordKey] = { key, userId, bodyHash, orderId: order.id, createdAt }
+  return { order, reused: false, mutatedNfts: [...mutated.values()] }
+}
 
-  return { order, reused: false, mutatedNfts }
+function randomTxHash(): string {
+  return `0x${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`
 }
 
 export function transitionOrderState(
   db: MockDb,
   orderId: string,
-  nextStatus: Exclude<OrderStatus, 'pending'>,
+  nextStatus: 'confirmed' | 'rejected',
   rejectionReason: OrderRejectionReason = null,
   now = Date.now(),
 ): { order: Order; mutatedNfts: Nft[] } | null {
   const order = db.orders[orderId]
-  if (!order) return null
+  if (!order || order.status !== 'pending') return null
+  delete db.settlements[orderId]
 
-  if (order.status !== 'pending') {
-    return null
-  }
-
-  const mutatedNfts: Nft[] = []
+  const mutated = new Map<string, Nft>()
   order.updatedAt = new Date(now).toISOString()
   order.version += 1
 
   if (nextStatus === 'confirmed') {
+    const hash = randomTxHash()
     order.status = 'confirmed'
     order.rejectionReason = null
-    const rawHex = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '')
-    const hash = `0x${rawHex.slice(0, 64)}`
-    order.transaction = {
-      hash,
-      explorerUrl: `https://etherscan.io/tx/${hash}`,
-    }
+    order.transaction = { hash, explorerUrl: `${EXPLORER_TX_URL[order.network]}${hash}` }
 
     const cart = getOrCreateCart(db, { kind: 'user', userId: order.userId })
-    for (const rLine of order.receipt.lines) {
-      const itemIndex = cart.items.findIndex(
-        (ci) => ci.nftId === rLine.nftId && ci.editionId === rLine.editionId,
-      )
-      if (itemIndex !== -1) {
-        const currentItem = cart.items[itemIndex]!
-        if (currentItem.quantity <= rLine.quantity) {
-          cart.items.splice(itemIndex, 1)
-        } else {
-          currentItem.quantity -= rLine.quantity
-        }
-      }
+    for (const line of order.receipt.lines) {
+      const item = cart.items.find((candidate) => candidate.editionId === line.editionId)
+      if (!item) continue
+      item.quantity -= line.quantity
+      if (item.quantity <= 0) cart.items = cart.items.filter((candidate) => candidate !== item)
     }
-    if (cart.items.length === 0) {
-      cart.couponCode = null
-    }
+    if (cart.items.length === 0) cart.couponCode = null
     cart.version += 1
   } else {
     order.status = 'rejected'
     order.rejectionReason = rejectionReason ?? 'insufficient_funds'
     order.transaction = null
-
-    for (const rLine of order.receipt.lines) {
-      const nft = db.nfts.find((n) => n.id === rLine.nftId)
-      const edition = nft?.editions.find((e) => e.id === rLine.editionId)
-      if (nft && edition) {
-        edition.available += rLine.quantity
-        nft.priceFrom = computePriceFrom(nft.editions, edition.price)
-        nft.version += 1
-        mutatedNfts.push(nft)
+    for (const line of order.receipt.lines) {
+      const nft = db.nfts.find((candidate) => candidate.id === line.nftId)
+      if (nft?.editions.some((edition) => edition.id === line.editionId)) {
+        mutated.set(nft.id, adjustStock(db, nft, line.editionId, line.quantity))
       }
     }
   }
 
-  return { order, mutatedNfts }
+  return { order, mutatedNfts: [...mutated.values()] }
+}
+
+export function planSettlement(db: MockDb, settlement: SettlementRecord): void {
+  db.settlements[settlement.orderId] = settlement
+}
+
+export function settleDueOrders(db: MockDb, now = Date.now()) {
+  const results: Array<{ order: Order; mutatedNfts: Nft[] }> = []
+  for (const settlement of Object.values(db.settlements)) {
+    if (Date.parse(settlement.dueAt) > now) continue
+    const result = transitionOrderState(
+      db,
+      settlement.orderId,
+      settlement.status,
+      settlement.rejectionReason,
+      now,
+    )
+    delete db.settlements[settlement.orderId]
+    if (result) results.push(result)
+  }
+  return results
 }
 
 export function getOrderForUser(db: MockDb, userId: string, orderId: string): Order {
   const order = db.orders[orderId]
   if (!order) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Pedido não encontrado.',
-    })
+    throw new MockHttpError({ status: 404, code: 'NOT_FOUND', message: 'Pedido não encontrado.' })
   }
   if (order.userId !== userId) {
     throw new MockHttpError({

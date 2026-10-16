@@ -4,6 +4,7 @@ import type {
   NetworkId,
   Nft,
   Order,
+  OrderRejectionReason,
   Quote,
   Wallet,
   WalletProvider,
@@ -45,6 +46,13 @@ export interface IdempotencyRecord {
   createdAt: string
 }
 
+export interface SettlementRecord {
+  orderId: string
+  dueAt: string
+  status: 'confirmed' | 'rejected'
+  rejectionReason: OrderRejectionReason
+}
+
 export type CouponRecord =
   | {
       code: string
@@ -62,7 +70,6 @@ export type CouponRecord =
 
 export interface MockDb {
   schemaVersion: number
-  scenarioId: string
   nfts: Nft[]
   users: MockUserRecord[]
   sessions: MockSessionRecord[]
@@ -70,10 +77,10 @@ export interface MockDb {
   carts: Record<string, Cart>
   quotes: Record<string, Quote>
   orders: Record<string, Order>
+  settlements: Record<string, SettlementRecord>
   walletsByUser: Record<string, Wallet[]>
   walletConnections: Record<string, WalletConnectionRecord>
   idempotencyKeys: Record<string, IdempotencyRecord>
   coupons: Record<string, CouponRecord>
-  priceChangeTriggeredByCart: Record<string, boolean>
-  soldOutTriggeredByCart: Record<string, boolean>
+  scenarioMarks: Record<string, true>
 }

@@ -28,9 +28,8 @@ import {
   WalletConnectionResponseSchema,
   WalletSchema,
   WalletsResponseSchema,
-  type CartOwner,
 } from '@/contracts'
-import { getActiveScenarioId, loadDb, saveDb } from '@/mocks/db/store'
+import { loadDb, saveDb } from '@/mocks/db/store'
 import {
   changePasswordForUser,
   createWalletForUser,
@@ -63,7 +62,6 @@ import {
   deleteWalletConnection,
   getOrderForUser,
   getPendingOrdersForUser,
-  transitionOrderState,
 } from '@/mocks/domain/orders'
 import {
   getAuthenticatedUser,
@@ -72,50 +70,29 @@ import {
   registerUser,
   toUserSummary,
 } from '@/mocks/domain/session'
-import { broadcastNftUpdated, broadcastOrderUpdated, dropAllSockets } from '@/mocks/realtime/server'
-import { withNetwork } from '@/mocks/scenarios'
+import { broadcastNftUpdated, dropAllSockets } from '@/mocks/realtime/server'
+import { scheduleSettlement } from '@/mocks/realtime/settlements'
+import {
+  assertWalletConnectionAllowed,
+  disruptFirstOrder,
+  ORDER_TIMEOUT_RESPONSE_MS,
+  SETTLEMENT_DELAY_MS,
+  sessionTtlFor,
+  settlementOutcome,
+} from '@/mocks/scenarios/checkout'
+import { withNetwork } from '@/mocks/scenarios/network'
+import { getActiveScenarioId } from '@/mocks/scenarios/registry'
+import { readJson, requireUser, resolveCartOwner } from './request'
 
 const API = import.meta.env.VITE_API_BASE_URL || '/api/v1'
+const AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+const AVATAR_MAX_BYTES = 2 * 1024 * 1024
 
-function resolveOptionalCartOwner(request: Request): {
-  owner: CartOwner
-  guestCartId?: string
-} {
-  const db = loadDb()
-  const authHeader = request.headers.get('Authorization')
-  if (authHeader?.startsWith('Bearer ')) {
-    try {
-      const { user } = getAuthenticatedUser(db, authHeader)
-      return { owner: { kind: 'user', userId: user.id } }
-    } catch {
-      // Fall back to guest cart when unauthenticated
-    }
-  }
-  const guestCartId = request.headers.get('X-Guest-Cart-Id') || undefined
-  return { owner: { kind: 'guest' }, guestCartId }
-}
-
-function scheduleOrderSettlement(orderId: string): void {
-  const scenarioId = getActiveScenarioId()
-  if (scenarioId === 'socket-drop') {
-    setTimeout(() => {
-      dropAllSockets({ refuseForMs: 1200 })
-    }, 250)
-  }
-
-  setTimeout(() => {
-    const db = loadDb()
-    const targetStatus = scenarioId === 'payment-declined' ? 'rejected' : 'confirmed'
-    const rejectionReason = scenarioId === 'payment-declined' ? 'insufficient_funds' : null
-    const transitioned = transitionOrderState(db, orderId, targetStatus, rejectionReason)
-    if (transitioned) {
-      saveDb()
-      for (const nft of transitioned.mutatedNfts) {
-        broadcastNftUpdated(nft)
-      }
-      broadcastOrderUpdated(transitioned.order)
-    }
-  }, 1500)
+async function toDataUrl(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ''
+  for (const byte of bytes) binary += String.fromCharCode(byte)
+  return `data:${file.type};base64,${btoa(binary)}`
 }
 
 export const handlers = [
@@ -123,8 +100,9 @@ export const handlers = [
     `${API}/auth/register`,
     withNetwork('POST /auth/register', async ({ request }) => {
       const db = loadDb()
-      const body = RegisterInputSchema.parse(await request.json())
-      const result = AuthResponseSchema.parse(await registerUser(db, body))
+      const body = await readJson(request, RegisterInputSchema)
+      const ttlMs = sessionTtlFor(getActiveScenarioId())
+      const result = AuthResponseSchema.parse(await registerUser(db, body, { ttlMs }))
       saveDb()
       return HttpResponse.json(result, { status: 201 })
     }),
@@ -134,10 +112,11 @@ export const handlers = [
     `${API}/auth/login`,
     withNetwork('POST /auth/login', async ({ request }) => {
       const db = loadDb()
-      const body = LoginInputSchema.parse(await request.json())
-      const result = AuthResponseSchema.parse(await loginUser(db, body))
+      const body = await readJson(request, LoginInputSchema)
+      const ttlMs = sessionTtlFor(getActiveScenarioId())
+      const result = AuthResponseSchema.parse(await loginUser(db, body, { ttlMs }))
       saveDb()
-      return HttpResponse.json(result, { status: 200 })
+      return HttpResponse.json(result)
     }),
   ),
 
@@ -146,11 +125,7 @@ export const handlers = [
     withNetwork('GET /auth/session', ({ request }) => {
       const db = loadDb()
       const { user, session } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const result = AuthResponseSchema.parse({
-        user: toUserSummary(user),
-        session,
-      })
-      return HttpResponse.json(result, { status: 200 })
+      return HttpResponse.json(AuthResponseSchema.parse({ user: toUserSummary(user), session }))
     }),
   ),
 
@@ -167,33 +142,23 @@ export const handlers = [
   http.get(
     `${API}/nfts/featured`,
     withNetwork('GET /nfts/featured', () => {
-      const db = loadDb()
-      const items = getFeaturedNfts(db)
-      const result = FeaturedNftsResponseSchema.parse({ items })
-      return HttpResponse.json(result, { status: 200 })
+      const items = getFeaturedNfts(loadDb())
+      return HttpResponse.json(FeaturedNftsResponseSchema.parse({ items }))
     }),
   ),
 
   http.get(
     `${API}/nfts/:id`,
     withNetwork<{ id: string }>('GET /nfts/:id', ({ params }) => {
-      const db = loadDb()
-      const nft = NftSchema.parse(getNftById(db, String(params.id)))
-      return HttpResponse.json(nft, { status: 200 })
+      return HttpResponse.json(NftSchema.parse(getNftById(loadDb(), params.id)))
     }),
   ),
 
   http.get(
     `${API}/nfts`,
     withNetwork('GET /nfts', ({ request }) => {
-      const db = loadDb()
-      const url = new URL(request.url)
-      const rawQuery: Record<string, string> = {}
-      url.searchParams.forEach((value, key) => {
-        rawQuery[key] = value
-      })
-      const result = NftListResponseSchema.parse(queryNfts(db, rawQuery))
-      return HttpResponse.json(result, { status: 200 })
+      const query = Object.fromEntries(new URL(request.url).searchParams)
+      return HttpResponse.json(NftListResponseSchema.parse(queryNfts(loadDb(), query)))
     }),
   ),
 
@@ -201,9 +166,8 @@ export const handlers = [
     `${API}/me/favorites`,
     withNetwork('GET /me/favorites', ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const result = FavoritesResponseSchema.parse(getFavoritesForUser(db, user.id))
-      return HttpResponse.json(result, { status: 200 })
+      const user = requireUser(db, request)
+      return HttpResponse.json(FavoritesResponseSchema.parse(getFavoritesForUser(db, user.id)))
     }),
   ),
 
@@ -211,8 +175,7 @@ export const handlers = [
     `${API}/me/favorites/:nftId`,
     withNetwork<{ nftId: string }>('PUT /me/favorites/:nftId', ({ request, params }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      addFavoriteForUser(db, user.id, String(params.nftId))
+      addFavoriteForUser(db, requireUser(db, request).id, params.nftId)
       saveDb()
       return new HttpResponse(null, { status: 204 })
     }),
@@ -222,8 +185,7 @@ export const handlers = [
     `${API}/me/favorites/:nftId`,
     withNetwork<{ nftId: string }>('DELETE /me/favorites/:nftId', ({ request, params }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      removeFavoriteForUser(db, user.id, String(params.nftId))
+      removeFavoriteForUser(db, requireUser(db, request).id, params.nftId)
       saveDb()
       return new HttpResponse(null, { status: 204 })
     }),
@@ -233,10 +195,10 @@ export const handlers = [
     `${API}/cart`,
     withNetwork('GET /cart', ({ request }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
+      const { owner, guestCartId } = resolveCartOwner(db, request)
       const cart = CartSchema.parse(getOrCreateCart(db, owner, guestCartId))
       saveDb()
-      return HttpResponse.json(cart, { status: 200 })
+      return HttpResponse.json(cart)
     }),
   ),
 
@@ -244,11 +206,11 @@ export const handlers = [
     `${API}/cart/items`,
     withNetwork('POST /cart/items', async ({ request }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
-      const body = AddCartItemInputSchema.parse(await request.json())
+      const { owner, guestCartId } = resolveCartOwner(db, request)
+      const body = await readJson(request, AddCartItemInputSchema)
       const cart = CartSchema.parse(addCartItem(db, owner, body, guestCartId))
       saveDb()
-      return HttpResponse.json(cart, { status: 200 })
+      return HttpResponse.json(cart)
     }),
   ),
 
@@ -256,13 +218,13 @@ export const handlers = [
     `${API}/cart/items/:itemId`,
     withNetwork<{ itemId: string }>('PATCH /cart/items/:itemId', async ({ request, params }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
-      const body = UpdateCartItemInputSchema.parse(await request.json())
+      const { owner, guestCartId } = resolveCartOwner(db, request)
+      const body = await readJson(request, UpdateCartItemInputSchema)
       const cart = CartSchema.parse(
-        updateCartItemQuantity(db, owner, String(params.itemId), body.quantity, guestCartId),
+        updateCartItemQuantity(db, owner, params.itemId, body.quantity, guestCartId),
       )
       saveDb()
-      return HttpResponse.json(cart, { status: 200 })
+      return HttpResponse.json(cart)
     }),
   ),
 
@@ -270,10 +232,10 @@ export const handlers = [
     `${API}/cart/items/:itemId`,
     withNetwork<{ itemId: string }>('DELETE /cart/items/:itemId', ({ request, params }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
-      const cart = CartSchema.parse(removeCartItem(db, owner, String(params.itemId), guestCartId))
+      const { owner, guestCartId } = resolveCartOwner(db, request)
+      const cart = CartSchema.parse(removeCartItem(db, owner, params.itemId, guestCartId))
       saveDb()
-      return HttpResponse.json(cart, { status: 200 })
+      return HttpResponse.json(cart)
     }),
   ),
 
@@ -281,11 +243,11 @@ export const handlers = [
     `${API}/cart/coupon`,
     withNetwork('PUT /cart/coupon', async ({ request }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
-      const body = ApplyCouponInputSchema.parse(await request.json())
+      const { owner, guestCartId } = resolveCartOwner(db, request)
+      const body = await readJson(request, ApplyCouponInputSchema)
       const cart = CartSchema.parse(applyCouponToCart(db, owner, body.code, guestCartId))
       saveDb()
-      return HttpResponse.json(cart, { status: 200 })
+      return HttpResponse.json(cart)
     }),
   ),
 
@@ -293,10 +255,10 @@ export const handlers = [
     `${API}/cart/coupon`,
     withNetwork('DELETE /cart/coupon', ({ request }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
+      const { owner, guestCartId } = resolveCartOwner(db, request)
       const cart = CartSchema.parse(removeCouponFromCart(db, owner, guestCartId))
       saveDb()
-      return HttpResponse.json(cart, { status: 200 })
+      return HttpResponse.json(cart)
     }),
   ),
 
@@ -304,13 +266,13 @@ export const handlers = [
     `${API}/cart/merge`,
     withNetwork('POST /cart/merge', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = MergeCartInputSchema.parse(await request.json())
+      const user = requireUser(db, request)
+      const body = await readJson(request, MergeCartInputSchema)
       const result = MergeCartResponseSchema.parse(
         mergeGuestCartIntoUserCart(db, user.id, body.guestCartId),
       )
       saveDb()
-      return HttpResponse.json(result, { status: 200 })
+      return HttpResponse.json(result)
     }),
   ),
 
@@ -318,11 +280,11 @@ export const handlers = [
     `${API}/quotes`,
     withNetwork('POST /quotes', async ({ request }) => {
       const db = loadDb()
-      const { owner, guestCartId } = resolveOptionalCartOwner(request)
-      const body = CreateQuoteInputSchema.parse(await request.json())
+      const { owner, guestCartId } = resolveCartOwner(db, request)
+      const body = await readJson(request, CreateQuoteInputSchema)
       const quote = QuoteSchema.parse(createQuoteForCart(db, owner, body.network, guestCartId))
       saveDb()
-      return HttpResponse.json(quote, { status: 200 })
+      return HttpResponse.json(quote)
     }),
   ),
 
@@ -330,11 +292,14 @@ export const handlers = [
     `${API}/wallet-connections`,
     withNetwork('POST /wallet-connections', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = WalletConnectionInputSchema.parse(await request.json())
-      const conn = WalletConnectionResponseSchema.parse(createWalletConnection(db, user.id, body))
+      const user = requireUser(db, request)
+      const body = await readJson(request, WalletConnectionInputSchema)
+      assertWalletConnectionAllowed(getActiveScenarioId())
+      const connection = WalletConnectionResponseSchema.parse(
+        createWalletConnection(db, user.id, body),
+      )
       saveDb()
-      return HttpResponse.json(conn, { status: 200 })
+      return HttpResponse.json(connection)
     }),
   ),
 
@@ -342,8 +307,7 @@ export const handlers = [
     `${API}/wallet-connections/:id`,
     withNetwork<{ id: string }>('DELETE /wallet-connections/:id', ({ request, params }) => {
       const db = loadDb()
-      getAuthenticatedUser(db, request.headers.get('Authorization'))
-      deleteWalletConnection(db, String(params.id))
+      deleteWalletConnection(db, requireUser(db, request).id, params.id)
       saveDb()
       return new HttpResponse(null, { status: 204 })
     }),
@@ -353,39 +317,39 @@ export const handlers = [
     `${API}/orders`,
     withNetwork('POST /orders', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = CreateOrderInputSchema.parse(await request.json())
-      const idempotencyKey = request.headers.get('Idempotency-Key')
+      const user = requireUser(db, request)
+      const body = await readJson(request, CreateOrderInputSchema)
+      const scenario = getActiveScenarioId()
 
+      disruptFirstOrder(db, user.id, body, scenario).forEach(broadcastNftUpdated)
       try {
         const { order, reused, mutatedNfts } = await createOrderFromQuote(
           db,
           user.id,
-          idempotencyKey,
+          request.headers.get('Idempotency-Key'),
           body,
         )
         saveDb()
-
-        for (const nft of mutatedNfts) {
-          broadcastNftUpdated(nft)
-        }
+        mutatedNfts.forEach(broadcastNftUpdated)
 
         if (!reused) {
-          scheduleOrderSettlement(order.id)
+          scheduleSettlement({
+            orderId: order.id,
+            dueAt: new Date(Date.now() + SETTLEMENT_DELAY_MS).toISOString(),
+            ...settlementOutcome(scenario),
+          })
+          // The drop outlasts the settlement, so the confirmation happens while offline.
+          if (scenario === 'socket-drop') {
+            setTimeout(() => dropAllSockets({ refuseForMs: SETTLEMENT_DELAY_MS }), 250)
+          }
+          if (scenario === 'order-timeout') await delay(ORDER_TIMEOUT_RESPONSE_MS)
         }
 
-        if (!reused && getActiveScenarioId() === 'order-timeout') {
-          await delay(10_000)
-        }
-
-        const parsedOrder = OrderSchema.parse(order)
-        return HttpResponse.json(parsedOrder, { status: reused ? 200 : 201 })
-      } catch (err) {
+        return HttpResponse.json(OrderSchema.parse(order), { status: reused ? 200 : 201 })
+      } catch (error) {
+        // Failed revalidation still stores the fresh quote and the acknowledged price.
         saveDb()
-        if (err instanceof MockHttpError && err.details?.updatedNft) {
-          broadcastNftUpdated(err.details.updatedNft as never)
-        }
-        throw err
+        throw error
       }
     }),
   ),
@@ -394,9 +358,8 @@ export const handlers = [
     `${API}/orders/:id`,
     withNetwork<{ id: string }>('GET /orders/:id', ({ request, params }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const order = OrderSchema.parse(getOrderForUser(db, user.id, String(params.id)))
-      return HttpResponse.json(order, { status: 200 })
+      const order = getOrderForUser(db, requireUser(db, request).id, params.id)
+      return HttpResponse.json(OrderSchema.parse(order))
     }),
   ),
 
@@ -404,10 +367,17 @@ export const handlers = [
     `${API}/orders`,
     withNetwork('GET /orders', ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
+      const user = requireUser(db, request)
+      const status = new URL(request.url).searchParams.get('status') ?? 'pending'
+      if (status !== 'pending') {
+        throw new MockHttpError({
+          status: 400,
+          code: 'BAD_REQUEST',
+          message: 'Somente status=pending é suportado.',
+        })
+      }
       const items = getPendingOrdersForUser(db, user.id)
-      const result = PendingOrdersResponseSchema.parse({ items })
-      return HttpResponse.json(result, { status: 200 })
+      return HttpResponse.json(PendingOrdersResponseSchema.parse({ items }))
     }),
   ),
 
@@ -415,9 +385,9 @@ export const handlers = [
     `${API}/me/profile`,
     withNetwork('GET /me/profile', ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const profile = ProfileSchema.parse(getProfileForUser(db, user.id))
-      return HttpResponse.json(profile, { status: 200 })
+      return HttpResponse.json(
+        ProfileSchema.parse(getProfileForUser(db, requireUser(db, request).id)),
+      )
     }),
   ),
 
@@ -425,11 +395,11 @@ export const handlers = [
     `${API}/me/profile`,
     withNetwork('PATCH /me/profile', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = UpdateProfileInputSchema.parse(await request.json())
+      const user = requireUser(db, request)
+      const body = await readJson(request, UpdateProfileInputSchema)
       const profile = ProfileSchema.parse(updateProfileForUser(db, user.id, body))
       saveDb()
-      return HttpResponse.json(profile, { status: 200 })
+      return HttpResponse.json(profile)
     }),
   ),
 
@@ -437,38 +407,27 @@ export const handlers = [
     `${API}/me/avatar`,
     withNetwork('PUT /me/avatar', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const contentType = request.headers.get('content-type') || ''
-
-      if (contentType.includes('application/json')) {
-        const json = (await request.json()) as { avatarUrl?: string | null }
-        const result = AvatarResponseSchema.parse(
-          updateAvatarForUser(db, user.id, json.avatarUrl ?? null),
-        )
-        saveDb()
-        return HttpResponse.json(result, { status: 200 })
-      }
-
-      const formData = await request.formData()
-      const file = formData.get('file')
+      const user = requireUser(db, request)
+      const file = await request
+        .formData()
+        .then((form) => form.get('file'))
+        .catch(() => null)
       if (!(file instanceof File)) {
         throw new MockHttpError({
           status: 422,
           code: 'VALIDATION_FAILED',
-          message: 'Arquivo de avatar inválido.',
+          message: 'Envie a imagem no campo "file".',
+          fieldErrors: { file: ['Envie uma imagem.'] },
         })
       }
-
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/webp']
-      if (!allowedTypes.includes(file.type)) {
+      if (!AVATAR_TYPES.includes(file.type)) {
         throw new MockHttpError({
           status: 415,
           code: 'UNSUPPORTED_MEDIA_TYPE',
           message: 'Formato não suportado. Use PNG, JPEG ou WebP.',
         })
       }
-
-      if (file.size > 2 * 1024 * 1024) {
+      if (file.size > AVATAR_MAX_BYTES) {
         throw new MockHttpError({
           status: 413,
           code: 'FILE_TOO_LARGE',
@@ -476,16 +435,23 @@ export const handlers = [
         })
       }
 
-      const buffer = await file.arrayBuffer()
-      const bytes = new Uint8Array(buffer)
-      let binary = ''
-      for (const b of bytes) {
-        binary += String.fromCharCode(b)
-      }
-      const dataUrl = `data:${file.type};base64,${btoa(binary)}`
-      const result = AvatarResponseSchema.parse(updateAvatarForUser(db, user.id, dataUrl))
+      const result = AvatarResponseSchema.parse(
+        updateAvatarForUser(db, user.id, await toDataUrl(file)),
+      )
       saveDb()
-      return HttpResponse.json(result, { status: 200 })
+      return HttpResponse.json(result)
+    }),
+  ),
+
+  http.delete(
+    `${API}/me/avatar`,
+    withNetwork('DELETE /me/avatar', ({ request }) => {
+      const db = loadDb()
+      const result = AvatarResponseSchema.parse(
+        updateAvatarForUser(db, requireUser(db, request).id, null),
+      )
+      saveDb()
+      return HttpResponse.json(result)
     }),
   ),
 
@@ -493,8 +459,8 @@ export const handlers = [
     `${API}/me/password`,
     withNetwork('POST /me/password', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = ChangePasswordInputSchema.parse(await request.json())
+      const user = requireUser(db, request)
+      const body = await readJson(request, ChangePasswordInputSchema)
       await changePasswordForUser(db, user.id, body)
       saveDb()
       return new HttpResponse(null, { status: 204 })
@@ -505,10 +471,8 @@ export const handlers = [
     `${API}/me/wallets`,
     withNetwork('GET /me/wallets', ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const items = getWalletsForUser(db, user.id)
-      const result = WalletsResponseSchema.parse({ items })
-      return HttpResponse.json(result, { status: 200 })
+      const items = getWalletsForUser(db, requireUser(db, request).id)
+      return HttpResponse.json(WalletsResponseSchema.parse({ items }))
     }),
   ),
 
@@ -516,8 +480,8 @@ export const handlers = [
     `${API}/me/wallets`,
     withNetwork('POST /me/wallets', async ({ request }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = CreateWalletInputSchema.parse(await request.json())
+      const user = requireUser(db, request)
+      const body = await readJson(request, CreateWalletInputSchema)
       const wallet = WalletSchema.parse(createWalletForUser(db, user.id, body))
       saveDb()
       return HttpResponse.json(wallet, { status: 201 })
@@ -528,11 +492,11 @@ export const handlers = [
     `${API}/me/wallets/:id`,
     withNetwork<{ id: string }>('PATCH /me/wallets/:id', async ({ request, params }) => {
       const db = loadDb()
-      const { user } = getAuthenticatedUser(db, request.headers.get('Authorization'))
-      const body = UpdateWalletInputSchema.parse(await request.json())
-      const wallet = WalletSchema.parse(updateWalletForUser(db, user.id, String(params.id), body))
+      const user = requireUser(db, request)
+      const body = await readJson(request, UpdateWalletInputSchema)
+      const wallet = WalletSchema.parse(updateWalletForUser(db, user.id, params.id, body))
       saveDb()
-      return HttpResponse.json(wallet, { status: 200 })
+      return HttpResponse.json(wallet)
     }),
   ),
 ]

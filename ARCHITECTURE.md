@@ -28,53 +28,54 @@ O pacote `engine.io-client` captura a referência `globalThis.WebSocket` no mome
 
 ## 2. Contratos REST
 
-Todos os schemas de entrada e saída estão centralizados em `src/contracts/` e são validados com `Schema.parse()` tanto nos handlers do MSW (`src/mocks/handlers/index.ts`) quanto no cliente HTTP.
+A fonte da verdade é `src/contracts/`: um schema zod por corpo e por resposta, usado pelo cliente e pelos handlers do MSW. Os handlers validam a entrada com `readJson` (`src/mocks/handlers/request.ts`) e passam a saída pelo mesmo schema que o cliente usa antes de responder.
 
-### Cabeçalhos padronizados
+### Cabeçalhos
 
 - `Authorization: Bearer <token>`: sessão autenticada.
-- `X-Guest-Cart-Id`: identificador do carrinho anônimo persistido no navegador para visitantes.
-- `X-Request-Id`: UUID gerado pelo interceptor de request do Axios e ecoado pelo servidor simulado em todas as respostas.
-- `Idempotency-Key`: UUID obrigatório em `POST /api/v1/orders` para impedir compras duplicadas em retries após timeout ou cliques repetidos.
+- `X-Guest-Cart-Id`: id do carrinho de visitante, gerado no cliente e guardado em `localStorage` (`nftmkt:guest-cart-id`).
+- `X-Request-Id`: UUID gerado pelo interceptor do Axios e devolvido pelo servidor simulado em toda resposta.
+- `Idempotency-Key`: obrigatório em `POST /orders` (seção 9).
 
-### Tabela de endpoints (`/api/v1`)
+### Endpoints (`/api/v1`)
 
-| Método e rota                    | Auth     | Entrada                                                                                          | Resposta de sucesso                                      | Códigos de erro principais                                                                                 |
-| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `POST /auth/register`            | Não      | `{ username, email, password }`                                                                  | `201 AuthResponse`                                       | `409 EMAIL_TAKEN`, `409 USERNAME_TAKEN`, `422 VALIDATION_FAILED`                                           |
-| `POST /auth/login`               | Não      | `{ email, password }`                                                                            | `200 AuthResponse`                                       | `401 INVALID_CREDENTIALS`, `422 VALIDATION_FAILED`                                                         |
-| `GET /auth/session`              | Sim      | —                                                                                                | `200 AuthResponse`                                       | `401 UNAUTHENTICATED`, `401 SESSION_EXPIRED`                                                               |
-| `POST /auth/logout`              | Sim      | —                                                                                                | `204 No Content`                                         | —                                                                                                          |
-| `GET /nfts`                      | Não      | Query: `q, collection, category, network, tab, minPrice, maxPrice, status, sort, page, pageSize` | `200 NftListResponse`                                    | `500 INTERNAL`, `503 UNAVAILABLE`                                                                          |
-| `GET /nfts/featured`             | Não      | —                                                                                                | `200 FeaturedNftsResponse`                               | `500 INTERNAL`                                                                                             |
-| `GET /nfts/:id`                  | Não      | —                                                                                                | `200 Nft`                                                | `404 NOT_FOUND`                                                                                            |
-| `GET /me/favorites`              | Sim      | —                                                                                                | `200 FavoritesResponse`                                  | `401 UNAUTHENTICATED`                                                                                      |
-| `PUT /me/favorites/:nftId`       | Sim      | —                                                                                                | `204 No Content`                                         | `401 UNAUTHENTICATED`, `404 NOT_FOUND`                                                                     |
-| `DELETE /me/favorites/:nftId`    | Sim      | —                                                                                                | `204 No Content`                                         | `401 UNAUTHENTICATED`, `404 NOT_FOUND`                                                                     |
-| `GET /cart`                      | Opcional | —                                                                                                | `200 Cart`                                               | —                                                                                                          |
-| `POST /cart/items`               | Opcional | `{ nftId, editionId, quantity }`                                                                 | `200 Cart`                                               | `404 NOT_FOUND`, `409 AVAILABILITY_CONFLICT`                                                               |
-| `PATCH /cart/items/:itemId`      | Opcional | `{ quantity }`                                                                                   | `200 Cart`                                               | `404 NOT_FOUND`, `409 AVAILABILITY_CONFLICT`                                                               |
-| `DELETE /cart/items/:itemId`     | Opcional | —                                                                                                | `200 Cart`                                               | `404 NOT_FOUND`                                                                                            |
-| `PUT /cart/coupon`               | Opcional | `{ code }`                                                                                       | `200 Cart`                                               | `422 COUPON_INVALID`, `422 COUPON_EXPIRED`                                                                 |
-| `DELETE /cart/coupon`            | Opcional | —                                                                                                | `200 Cart`                                               | —                                                                                                          |
-| `POST /cart/merge`               | Sim      | `{ guestCartId }`                                                                                | `200 MergeCartResponse`                                  | `401 UNAUTHENTICATED`                                                                                      |
-| `POST /quotes`                   | Opcional | `{ network }`                                                                                    | `200 Quote`                                              | `409 BAD_REQUEST` (carrinho vazio)                                                                         |
-| `POST /wallet-connections`       | Sim      | `{ walletId, network, provider }`                                                                | `200 WalletConnectionResponse`                           | `404 NOT_FOUND`, `409 WALLET_REJECTED`                                                                     |
-| `DELETE /wallet-connections/:id` | Sim      | —                                                                                                | `204 No Content`                                         | `401 UNAUTHENTICATED`                                                                                      |
-| `POST /orders`                   | Sim      | `{ quoteId, connectionId, buyer }` + `Idempotency-Key`                                           | `201 Order` (novo) / `200 Order` (repetição idempotente) | `409 QUOTE_OUTDATED`, `409 AVAILABILITY_CONFLICT`, `409 IDEMPOTENCY_KEY_REUSED`, `409 WALLET_DISCONNECTED` |
-| `GET /orders/:id`                | Sim      | —                                                                                                | `200 Order`                                              | `403 FORBIDDEN`, `404 NOT_FOUND`                                                                           |
-| `GET /orders?status=pending`     | Sim      | —                                                                                                | `200 PendingOrdersResponse`                              | `401 UNAUTHENTICATED`                                                                                      |
-| `GET /me/profile`                | Sim      | —                                                                                                | `200 Profile`                                            | `401 UNAUTHENTICATED`                                                                                      |
-| `PATCH /me/profile`              | Sim      | `{ displayName, username, email, ensName, walletNickname }`                                      | `200 Profile`                                            | `409 USERNAME_TAKEN`, `409 EMAIL_TAKEN`, `422 VALIDATION_FAILED`                                           |
-| `PUT /me/avatar`                 | Sim      | `multipart/form-data` (`file` ≤ 2 MB; PNG/JPEG/WebP)                                             | `200 AvatarResponse`                                     | `413 FILE_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`                                                         |
-| `POST /me/password`              | Sim      | `{ currentPassword, newPassword }`                                                               | `204 No Content`                                         | `422 WRONG_PASSWORD`, `422 VALIDATION_FAILED`                                                              |
-| `GET /me/wallets`                | Sim      | —                                                                                                | `200 WalletsResponse`                                    | `401 UNAUTHENTICATED`                                                                                      |
-| `POST /me/wallets`               | Sim      | `CreateWalletInput`                                                                              | `201 Wallet`                                             | `409 WALLET_CONFLICT`, `422 VALIDATION_FAILED`                                                             |
-| `PATCH /me/wallets/:id`          | Sim      | `UpdateWalletInput`                                                                              | `200 Wallet`                                             | `403 FORBIDDEN`, `404 NOT_FOUND`, `409 WALLET_CONFLICT`, `422 VALIDATION_FAILED`                           |
+| Método e rota                    | Auth     | Entrada                                                                                          | Sucesso                                     | Erros principais                                                                                                                          |
+| -------------------------------- | -------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /auth/register`            | Não      | `{ username, email, password }`                                                                  | `201 AuthResponse`                          | `409 EMAIL_TAKEN`, `409 USERNAME_TAKEN`, `422 VALIDATION_FAILED`                                                                          |
+| `POST /auth/login`               | Não      | `{ email, password }`                                                                            | `200 AuthResponse`                          | `401 INVALID_CREDENTIALS`, `422 VALIDATION_FAILED`                                                                                        |
+| `GET /auth/session`              | Sim      | —                                                                                                | `200 AuthResponse`                          | `401 UNAUTHENTICATED`, `401 SESSION_EXPIRED`                                                                                              |
+| `POST /auth/logout`              | Sim      | —                                                                                                | `204` (idempotente)                         | —                                                                                                                                         |
+| `GET /nfts`                      | Não      | Query: `q, collection, category, network, tab, minPrice, maxPrice, status, sort, page, pageSize` | `200 NftListResponse`                       | `500 INTERNAL`, `503 UNAVAILABLE`                                                                                                         |
+| `GET /nfts/featured`             | Não      | —                                                                                                | `200 FeaturedNftsResponse`                  | `500 INTERNAL`                                                                                                                            |
+| `GET /nfts/:id`                  | Não      | —                                                                                                | `200 Nft`                                   | `404 NOT_FOUND`                                                                                                                           |
+| `GET /me/favorites`              | Sim      | —                                                                                                | `200 FavoritesResponse`                     | `401`                                                                                                                                     |
+| `PUT /me/favorites/:nftId`       | Sim      | —                                                                                                | `204` (idempotente)                         | `401`, `404 NOT_FOUND`                                                                                                                    |
+| `DELETE /me/favorites/:nftId`    | Sim      | —                                                                                                | `204` (idempotente)                         | `401`, `404 NOT_FOUND`                                                                                                                    |
+| `GET /cart`                      | Opcional | —                                                                                                | `200 Cart` (sem `X-Guest-Cart-Id`, cria um) | `401`                                                                                                                                     |
+| `POST /cart/items`               | Opcional | `{ nftId, editionId, quantity }`                                                                 | `200 Cart`                                  | `404 NOT_FOUND`, `409 AVAILABILITY_CONFLICT`                                                                                              |
+| `PATCH /cart/items/:itemId`      | Opcional | `{ quantity }`                                                                                   | `200 Cart`                                  | `404 NOT_FOUND`, `409 AVAILABILITY_CONFLICT`                                                                                              |
+| `DELETE /cart/items/:itemId`     | Opcional | —                                                                                                | `200 Cart`                                  | `404 NOT_FOUND`                                                                                                                           |
+| `PUT /cart/coupon`               | Opcional | `{ code }`                                                                                       | `200 Cart`                                  | `422 COUPON_INVALID`, `422 COUPON_EXPIRED`                                                                                                |
+| `DELETE /cart/coupon`            | Opcional | —                                                                                                | `200 Cart`                                  | —                                                                                                                                         |
+| `POST /cart/merge`               | Sim      | `{ guestCartId }`                                                                                | `200 MergeCartResponse`                     | `401`                                                                                                                                     |
+| `POST /quotes`                   | Opcional | `{ network }`                                                                                    | `200 Quote` (problemas em `issues`)         | `409 CART_EMPTY`                                                                                                                          |
+| `POST /wallet-connections`       | Sim      | `{ walletId, network, provider }`                                                                | `200 WalletConnectionResponse`              | `404 NOT_FOUND`, `409 WALLET_REJECTED`, `422 VALIDATION_FAILED` (carteira de outra rede)                                                  |
+| `DELETE /wallet-connections/:id` | Sim      | —                                                                                                | `204` (idempotente)                         | `403 FORBIDDEN`                                                                                                                           |
+| `POST /orders`                   | Sim      | `{ quoteId, connectionId, buyer }` + `Idempotency-Key`                                           | `201 Order` novo; `200 Order` na repetição  | `400 BAD_REQUEST` (sem chave), `409 QUOTE_OUTDATED`, `409 AVAILABILITY_CONFLICT`, `409 IDEMPOTENCY_KEY_REUSED`, `409 WALLET_DISCONNECTED` |
+| `GET /orders/:id`                | Sim      | —                                                                                                | `200 Order`                                 | `403 FORBIDDEN`, `404 NOT_FOUND`                                                                                                          |
+| `GET /orders?status=pending`     | Sim      | —                                                                                                | `200 PendingOrdersResponse`                 | `400 BAD_REQUEST` (outro `status`)                                                                                                        |
+| `GET /me/profile`                | Sim      | —                                                                                                | `200 Profile`                               | `401`                                                                                                                                     |
+| `PATCH /me/profile`              | Sim      | `{ displayName, username, email, ensName, walletNickname }`                                      | `200 Profile`                               | `409 USERNAME_TAKEN`, `409 EMAIL_TAKEN`, `422 VALIDATION_FAILED`                                                                          |
+| `PUT /me/avatar`                 | Sim      | `multipart/form-data` com `file` (até 2 MB; PNG, JPEG ou WebP)                                   | `200 AvatarResponse`                        | `413 FILE_TOO_LARGE`, `415 UNSUPPORTED_MEDIA_TYPE`, `422 VALIDATION_FAILED` (sem arquivo)                                                 |
+| `DELETE /me/avatar`              | Sim      | —                                                                                                | `200 AvatarResponse` com `avatarUrl: null`  | `401`                                                                                                                                     |
+| `POST /me/password`              | Sim      | `{ currentPassword, newPassword }`                                                               | `204`                                       | `422 WRONG_PASSWORD`, `422 VALIDATION_FAILED`                                                                                             |
+| `GET /me/wallets`                | Sim      | —                                                                                                | `200 WalletsResponse`                       | `401`                                                                                                                                     |
+| `POST /me/wallets`               | Sim      | `CreateWalletInput`                                                                              | `201 Wallet`                                | `409 WALLET_CONFLICT`, `422 VALIDATION_FAILED`                                                                                            |
+| `PATCH /me/wallets/:id`          | Sim      | `UpdateWalletInput`                                                                              | `200 Wallet`                                | `403 FORBIDDEN`, `404 NOT_FOUND`, `409 WALLET_CONFLICT`, `422 VALIDATION_FAILED`                                                          |
 
-### Envelope de erro e normalização no cliente
+Valem para todas as rotas: corpo que não é JSON responde `400 BAD_REQUEST`; corpo fora do schema responde `422 VALIDATION_FAILED` com `fieldErrors` pelo caminho do campo (`buyer.email`, por exemplo). Nas rotas com auth opcional, um `Authorization` presente mas inválido ou expirado responde `401` em vez de cair no carrinho de visitante, para o cliente conseguir tratar a expiração. Os `401` sem código na tabela são `UNAUTHENTICATED` ou `SESSION_EXPIRED`.
 
-O servidor simulado devolve erros no formato:
+### Envelope de erro
 
 ```json
 {
@@ -89,6 +90,8 @@ O servidor simulado devolve erros no formato:
 }
 ```
 
+`retryable` é `true` só para 429, 500 e 503. Uma resposta que falha no próprio schema de saída é bug do servidor simulado e vira `500 INTERNAL`; em desenvolvimento, o erro vai para o console.
+
 No cliente (`src/lib/http.ts` e `src/lib/api-error.ts`), qualquer erro (HTTP, falha de conexão do MSW ou timeout do Axios de 8 s) é convertido em `ApiError` com `retryable: true` apenas para falhas de rede, timeout e HTTP 429, 500 e 503.
 
 ## 3. Eventos Socket.IO
@@ -98,12 +101,26 @@ O servidor simulado em `src/mocks/realtime/server.ts` publica eventos tipados (`
 - `nft.updated`: público para todas as conexões ativas; carrega `version` incrementada do NFT, lista de edições (`id`, `price`, `available`) e `priceFrom` recalculado.
 - `order.updated`: privado (enviado apenas para conexões cujo token corresponde ao `order.userId`); carrega `version`, `status` (`pending | confirmed | rejected`), `rejectionReason` e `transaction`.
 
-## 4. Transporte dos mocks e limitações
+## 4. Servidor simulado: transporte, cenários e limitações
 
-- **REST:** interceptado via Service Worker (`public/mockServiceWorker.js`).
-- **WebSocket:** interceptado na mesma aba via `@mswjs/socket.io-binding` (`toSocketIo(connection)`).
-- **Keep-alive manual:** o `@mswjs/socket.io-binding` 0.2.0 envia `pingInterval: 25000` e `pingTimeout: 5000` no handshake, mas não dispara pacotes de ping sozinho. O servidor simulado envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no evento `close`, impedindo desconexões por ping timeout aos 30 s.
-- **Identificação do usuário no socket:** como o binding confirma o pacote CONNECT antes de expor o payload de autenticação, o mock inspeciona a mensagem Engine.IO/Socket.IO iniciada por `40{...}` para extrair o token e associar a conexão ao `userId`.
+- **REST:** o Service Worker (`public/mockServiceWorker.js`) intercepta `fetch` e XHR; os handlers ficam em `src/mocks/handlers/`.
+- **WebSocket:** o MSW troca a classe global `WebSocket` na mesma aba e o `@mswjs/socket.io-binding` (`toSocketIo(connection)`) fala o protocolo do Socket.IO. O long-polling do Engine.IO não é interceptado, então o cliente precisa usar só o transporte `websocket`.
+- **Ping manual:** o binding 0.2.0 anuncia `pingInterval: 25000` e `pingTimeout: 5000`, mas nunca envia ping. O mock envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no `close`; sem isso o cliente derruba a conexão por "ping timeout" aos 30 s.
+- **Usuário do socket:** o binding confirma o CONNECT antes de expor o `auth`, então o mock lê o pacote cru `40{"token":"…"}` e associa a conexão ao `userId`. Sem token válido a conexão fica anônima e só recebe `nft.updated`.
+
+### Banco e domínio
+
+O banco é um único `MockDb` em `localStorage` (`nftmkt.mockdb.v1`), gravado a cada mutação e recarregado pelo evento `storage` quando outra aba o altera. O campo `schemaVersion` (hoje 2) diferente do esperado descarta o banco e re-semeia.
+
+As regras ficam em `src/mocks/domain/` como funções sobre o `MockDb`, sem leitura de cenário nem de `localStorage`, testadas com Vitest. `inventory.ts` concentra preço e estoque: toda mudança recalcula `priceFrom`, incrementa a `version` do NFT e a `version` de cada carrinho que o contém, para nenhuma cotação ser reaproveitada com linhas velhas.
+
+### Cenários
+
+- `src/mocks/scenarios/registry.ts` é a única fonte do cenário ativo (`localStorage`, chave `nftmkt:scenario`). Id desconhecido em `?scenario=` é ignorado; em `window.__mock.setScenario` lança erro.
+- `src/mocks/scenarios/network.ts` aplica, nesta ordem, as regras de `__mock.setRules`/`__mock.hold`, as falhas do cenário (`offline`, `server-error`, `flaky`) e a latência (40–120 ms, 1,5–3 s no `slow`, inversa a `q` no `race`), sorteada por um PRNG mulberry32 com semente fixa.
+- `src/mocks/scenarios/checkout.ts` guarda os ganchos de pedido. `price-change-checkout`, `sold-out-checkout` e `wallet-disconnect` mexem no banco uma vez por usuário (marca em `scenarioMarks`) antes de o domínio validar o `POST /orders`; o cliente recebe a falha pelas mesmas checagens que uma mudança real dispararia.
+- A confirmação ou recusa do pedido é agendada em `settlements`, dentro do banco, 1,5 s após a criação (`src/mocks/realtime/settlements.ts`). O boot reagenda o que estiver pendente, então um refresh com pedido `pending` não deixa o pedido parado.
+- `window.__mock.countOrders(userId)` não conta o pedido que vem no seed, para o teste afirmar "exatamente um pedido novo".
 
 ## 5. Rotas, proteção e política de sessão
 
@@ -130,11 +147,13 @@ Sessões são representadas por tokens opacos (`kurio-tok-...`) validados pelo s
 3. O evento `storage` na chave `nftmkt:session` sincroniza login e logout entre abas abertas.
 4. _Trade-off documentado:_ em produção com backend dedicado, o token de sessão viveria num cookie `httpOnly; Secure; SameSite=Lax` com rotação de refresh token. Como o Service Worker do MSW no navegador não intercepta nem impõe a flag `httpOnly` em cookies de documento, `localStorage` foi adotado conscientemente na simulação.
 
-## 6. Estado do carrinho e precisão em ETH
+## 6. Carrinho, cotação e valores em ETH
 
-- Valores monetários trafegam exclusivamente como strings decimais (`EthAmount`) e todos os cálculos em `src/lib/eth.ts` operam em `bigint` na escala de wei ($10^{18}$), evitando erros de ponto flutuante IEEE-754.
-- A cotação (`POST /api/v1/quotes`) é a única fonte de verdade para subtotal, desconto, taxa de rede (`0.016 ETH` na Ethereum, `0.002 ETH` na Polygon e `0.001 ETH` na Solana) e total.
-- Na confirmação do pedido (`confirmed`), o servidor subtrai do carrinho apenas os itens e quantidades constantes no snapshot `order.receipt.lines`, preservando qualquer item adicionado após a geração da cotação.
+- Valores em ETH trafegam como string decimal (`EthAmount`) e todo cálculo em `src/lib/eth.ts` usa `bigint` em wei (18 casas). O mesmo módulo serve o app e o mock, e o Vitest faz a ida e volta (`formatEth(parseEth(x))`) de todos os valores do seed.
+- **Visitante:** o cliente gera o id do carrinho e o envia em `X-Guest-Cart-Id`. Sem o cabeçalho, o servidor cria um carrinho com id próprio em vez de reaproveitar um carrinho anônimo comum.
+- **Mesclagem no login:** `POST /cart/merge` soma as quantidades do visitante às do usuário, limita cada linha a `min(available, maxPerOrder)`, descreve cada corte em `adjustments` e mantém o cupom do visitante quando o usuário não tem um. O carrinho de visitante é apagado.
+- **Cotação como verdade:** subtotal, desconto, taxa (0.016 ETH na Ethereum, 0.002 na Polygon e 0.001 na Solana) e total saem de `POST /quotes`. Estoque insuficiente, edição esgotada e cupom inválido ou expirado aparecem em `issues` e bloqueiam a compra. `PRICE_CHANGED` compara o preço atual com `unitPriceWhenAdded` e só informa: a cotação já traz o preço novo.
+- **Pós-compra:** na confirmação, o servidor subtrai do carrinho exatamente as linhas e quantidades do recibo; o que foi adicionado depois da cotação continua lá. A recusa devolve o estoque reservado e não mexe no carrinho.
 
 ## 7. Estratégia de cache, retries e sincronização
 
@@ -150,12 +169,16 @@ Configuração base do `QueryClient` em `src/app/query-client.ts`:
 
 A ser detalhada nas Fases 7 e 8 com o `event-ledger` no cliente.
 
-## 9. Idempotência de pedidos
+## 9. Idempotência e revalidação de pedidos
 
-`POST /api/v1/orders` exige o cabeçalho `Idempotency-Key`. O domínio armazena `userId + key -> { bodyHash, orderId, createdAt }` por 24 h:
+`POST /orders` exige `Idempotency-Key`. O servidor guarda `userId + chave → { hash SHA-256 do corpo, orderId }` por 24 h:
 
-- Mesma chave + mesmo hash SHA-256 do corpo canônico: retorna HTTP `200` com o pedido existente, sem reservar estoque novamente nem duplicar a compra.
-- Mesma chave + corpo diferente: retorna HTTP `409 IDEMPOTENCY_KEY_REUSED`.
+- mesma chave e mesmo corpo: devolve o pedido existente com `200`, sem reservar estoque de novo;
+- mesma chave e corpo diferente: `409 IDEMPOTENCY_KEY_REUSED`.
+
+A repetição é conferida antes de qualquer outra regra, por isso o reenvio depois de um timeout recupera o pedido mesmo que a conexão da carteira já tenha caído. Para um pedido novo, o servidor revalida só as linhas cotadas: conexão ativa e do mesmo usuário (`409 WALLET_DISCONNECTED`), validade de 10 min, rede da conexão igual à da cotação, cupom igual ao do carrinho e ainda válido, taxa da rede, presença no carrinho com a quantidade cotada, estoque (`409 AVAILABILITY_CONFLICT`) e preço e `version` de cada NFT. Qualquer divergência que não seja de estoque responde `409 QUOTE_OUTDATED` com a cotação nova em `details.quote`. Item extra no carrinho não invalida a cotação.
+
+O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópia gravada uma vez, que o catálogo não altera depois.
 
 ## 10. Registro de decisões
 
@@ -170,6 +193,11 @@ A ser detalhada nas Fases 7 e 8 com o `event-ledger` no cliente.
 | `src/routeTree.gen.ts` versionado no Git                 | Gerar apenas em build/dev                    | Permite que `npm run typecheck` (`tsc -b`) passe imediatamente após `npm ci` num checkout limpo                                                                                                                                 |
 | `.env` versionado com padrões públicos da simulação      | `.env.example` com cópia manual              | Não há segredos no projeto; versionar `.env` (ignorando `.env.local` no `.gitignore`) garante que `npm ci && npm run ci` e o deploy na Vercel funcionem sem etapa manual                                                        |
 | Hashes PBKDF2 do seed pré-calculados                     | Calcular PBKDF2 no boot inicial              | Mantém a verificação criptográfica real via Web Crypto (`100.000` iterações SHA-256) sem penalizar o TBT/LCP na primeira abertura da página                                                                                     |
+| Código `CART_EMPTY` para cotar carrinho vazio            | `400 BAD_REQUEST`                            | O contrato pede `409` para carrinho vazio; um código próprio evita usar `BAD_REQUEST`, que pertence ao `400`                                                                                                                    |
+| `PRICE_CHANGED` só informa                               | Bloquear a compra até um "aceite"            | A cotação já carrega o preço novo e o contrato não tem rota de aceite; bloquear deixaria o item preso no carrinho                                                                                                               |
+| Ganchos de cenário fora do domínio                       | `if (cenário)` dentro das regras             | O domínio fica puro e testável; o cenário altera o banco antes da validação, e a falha chega pelas mesmas checagens de uma mudança real                                                                                         |
+| Liquidação do pedido gravada no banco                    | `setTimeout` em memória                      | Um refresh com pedido pendente perdia o timer e o pedido nunca saía de `pending`                                                                                                                                                |
+| `DELETE /me/avatar` para remover o avatar                | `PUT /me/avatar` com JSON                    | Uma rota com dois formatos de corpo exigia validação em dobro; a remoção ganha rota própria                                                                                                                                     |
 
 ## 11. Decisões de UX
 
@@ -189,4 +217,6 @@ As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.pn
 
 ## 14. Limitações conhecidas
 
-- Como o servidor simulado MSW + Socket.IO roda no contexto da aba, o banco em `localStorage` é sincronizado entre abas pelo evento `storage`, mas eventos WebSocket são emitidos para as conexões da aba que originou a mutação.
+- O servidor simulado vive na aba. Duas abas compartilham o banco pelo `localStorage`, mas os eventos do socket só chegam às conexões da aba que fez a mudança.
+- Cada aba agenda a liquidação dos pedidos pendentes que encontra no banco; a máquina de estados ignora a segunda transição, então não há confirmação dupla.
+- O `localStorage` tem cerca de 5 MB. Se encher, a gravação falha sem derrubar a requisição e a mudança vale só na memória da aba até o próximo refresh; por isso o avatar precisa chegar reduzido.

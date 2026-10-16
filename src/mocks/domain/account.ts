@@ -3,26 +3,53 @@ import {
   VALIDATION_MESSAGES,
   type ChangePasswordInput,
   type CreateWalletInput,
+  type Holder,
+  type NetworkId,
   type Profile,
   type UpdateProfileInput,
   type UpdateWalletInput,
   type Wallet,
+  type WalletRole,
 } from '@/contracts'
-import type { MockDb } from '@/mocks/db/schema'
+import type { MockDb, MockUserRecord } from '@/mocks/db/schema'
 import { hashPassword, verifyPassword } from './crypto'
 import { MockHttpError } from './errors'
 
 const RESERVED_USERNAMES = new Set(['admin', 'root', 'support', 'kurio'])
 
-export function getProfileForUser(db: MockDb, userId: string): Profile {
-  const user = db.users.find((u) => u.id === userId)
-  if (!user) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Perfil não encontrado.',
-    })
+function fieldConflict(code: string, field: string, message: string): MockHttpError {
+  return new MockHttpError({ status: 409, code, message, fieldErrors: { [field]: [message] } })
+}
+
+export function assertUsernameAvailable(db: MockDb, username: string, exceptUserId?: string) {
+  const wanted = username.toLowerCase()
+  const taken =
+    RESERVED_USERNAMES.has(wanted) ||
+    db.users.some((user) => user.id !== exceptUserId && user.username.toLowerCase() === wanted)
+  if (taken) throw fieldConflict('USERNAME_TAKEN', 'username', VALIDATION_MESSAGES.usernameTaken)
+}
+
+export function assertEmailAvailable(db: MockDb, email: string, exceptUserId?: string) {
+  const wanted = email.toLowerCase()
+  if (db.users.some((user) => user.id !== exceptUserId && user.email.toLowerCase() === wanted)) {
+    throw fieldConflict('EMAIL_TAKEN', 'email', VALIDATION_MESSAGES.emailTaken)
   }
+}
+
+function requireUser(db: MockDb, userId: string): MockUserRecord {
+  const user = db.users.find((candidate) => candidate.id === userId)
+  if (!user) {
+    throw new MockHttpError({ status: 404, code: 'NOT_FOUND', message: 'Perfil não encontrado.' })
+  }
+  return user
+}
+
+function stripEnsSuffix(name: string): string {
+  return name.trim().replace(/\.eth$/i, '')
+}
+
+export function getProfileForUser(db: MockDb, userId: string): Profile {
+  const user = requireUser(db, userId)
   return {
     id: user.id,
     displayName: user.displayName,
@@ -40,45 +67,16 @@ export function updateProfileForUser(
   userId: string,
   input: UpdateProfileInput,
 ): Profile {
-  const user = db.users.find((u) => u.id === userId)
-  if (!user) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Perfil não encontrado.',
-    })
-  }
-
-  const normalizedUsername = input.username.trim()
-  const normalizedEmail = input.email.trim().toLowerCase()
-
-  if (
-    RESERVED_USERNAMES.has(normalizedUsername.toLowerCase()) ||
-    db.users.some(
-      (u) => u.id !== userId && u.username.toLowerCase() === normalizedUsername.toLowerCase(),
-    )
-  ) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'USERNAME_TAKEN',
-      message: VALIDATION_MESSAGES.usernameTaken,
-      fieldErrors: { username: [VALIDATION_MESSAGES.usernameTaken] },
-    })
-  }
-
-  if (db.users.some((u) => u.id !== userId && u.email.toLowerCase() === normalizedEmail)) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'EMAIL_TAKEN',
-      message: VALIDATION_MESSAGES.emailTaken,
-      fieldErrors: { email: [VALIDATION_MESSAGES.emailTaken] },
-    })
-  }
+  const user = requireUser(db, userId)
+  const username = input.username.trim()
+  const email = input.email.trim().toLowerCase()
+  assertUsernameAvailable(db, username, userId)
+  assertEmailAvailable(db, email, userId)
 
   user.displayName = input.displayName.trim()
-  user.username = normalizedUsername
-  user.email = normalizedEmail
-  user.ensName = input.ensName?.trim() ? input.ensName.trim().replace(/\.eth$/i, '') : null
+  user.username = username
+  user.email = email
+  user.ensName = input.ensName?.trim() ? stripEnsSuffix(input.ensName) : null
   user.walletNickname = input.walletNickname.trim()
 
   return getProfileForUser(db, userId)
@@ -89,14 +87,7 @@ export function updateAvatarForUser(
   userId: string,
   avatarUrl: string | null,
 ): { avatarUrl: string | null } {
-  const user = db.users.find((u) => u.id === userId)
-  if (!user) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Perfil não encontrado.',
-    })
-  }
+  const user = requireUser(db, userId)
   user.avatarUrl = avatarUrl
   return { avatarUrl: user.avatarUrl }
 }
@@ -106,17 +97,9 @@ export async function changePasswordForUser(
   userId: string,
   input: ChangePasswordInput,
 ): Promise<void> {
-  const user = db.users.find((u) => u.id === userId)
-  if (!user) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Perfil não encontrado.',
-    })
-  }
+  const user = requireUser(db, userId)
 
-  const valid = await verifyPassword(input.currentPassword, user.passwordSalt, user.passwordHash)
-  if (!valid) {
+  if (!(await verifyPassword(input.currentPassword, user.passwordSalt, user.passwordHash))) {
     throw new MockHttpError({
       status: 422,
       code: 'WRONG_PASSWORD',
@@ -126,28 +109,43 @@ export async function changePasswordForUser(
   }
 
   if (input.currentPassword === input.newPassword) {
+    const message = 'A nova senha deve ser diferente da senha atual.'
     throw new MockHttpError({
       status: 422,
       code: 'VALIDATION_FAILED',
-      message: 'A nova senha deve ser diferente da senha atual.',
-      fieldErrors: { newPassword: ['A nova senha deve ser diferente da senha atual.'] },
+      message,
+      fieldErrors: { newPassword: [message] },
     })
   }
 
-  const newSalt = `kurio-salt-${crypto.randomUUID()}`
-  user.passwordSalt = newSalt
-  user.passwordHash = await hashPassword(input.newPassword, newSalt)
+  user.passwordSalt = `kurio-salt-${crypto.randomUUID()}`
+  user.passwordHash = await hashPassword(input.newPassword, user.passwordSalt)
 }
 
 export function getWalletsForUser(db: MockDb, userId: string): Wallet[] {
   return db.walletsByUser[userId] ?? []
 }
 
-export function createWalletForUser(db: MockDb, userId: string, input: CreateWalletInput): Wallet {
-  const wallets = db.walletsByUser[userId] ?? []
-  const normalizedAddress = input.address.trim()
+// EVM addresses are hex and case-insensitive; Solana base58 addresses are case-sensitive.
+function sameAddress(a: string, b: string): boolean {
+  return a.startsWith('0x') && b.startsWith('0x') ? a.toLowerCase() === b.toLowerCase() : a === b
+}
 
-  if (!isValidWalletAddressForNetwork(normalizedAddress, input.network)) {
+function normalizeHolder(holder: Holder): Holder {
+  return {
+    displayName: holder.displayName.trim(),
+    profileName: holder.profileName.trim(),
+    email: holder.email.trim().toLowerCase(),
+    ensName: stripEnsSuffix(holder.ensName),
+    referralCode: holder.referralCode.trim(),
+  }
+}
+
+function assertWalletSlot(
+  wallets: Wallet[],
+  next: { id?: string; address: string; network: NetworkId; role: WalletRole },
+) {
+  if (!isValidWalletAddressForNetwork(next.address, next.network)) {
     throw new MockHttpError({
       status: 422,
       code: 'VALIDATION_FAILED',
@@ -156,48 +154,38 @@ export function createWalletForUser(db: MockDb, userId: string, input: CreateWal
     })
   }
 
-  if (wallets.some((w) => w.address.toLowerCase() === normalizedAddress.toLowerCase())) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'WALLET_CONFLICT',
-      message: 'Este endereço de carteira já está cadastrado.',
-      fieldErrors: { address: ['Este endereço de carteira já está cadastrado.'] },
-    })
+  const others = wallets.filter((wallet) => wallet.id !== next.id)
+  if (others.some((wallet) => sameAddress(wallet.address, next.address))) {
+    throw fieldConflict(
+      'WALLET_CONFLICT',
+      'address',
+      'Este endereço de carteira já está cadastrado.',
+    )
   }
+  if (others.some((wallet) => wallet.role === next.role)) {
+    const slot = next.role === 'primary' ? 'principal' : 'secundária'
+    throw fieldConflict('WALLET_CONFLICT', 'role', `Você já possui uma carteira ${slot}.`)
+  }
+}
 
-  if (wallets.some((w) => w.role === input.role)) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'WALLET_CONFLICT',
-      message: `Você já possui uma carteira ${input.role === 'primary' ? 'principal' : 'secundária'}.`,
-      fieldErrors: {
-        role: [
-          `Você já possui uma carteira ${input.role === 'primary' ? 'principal' : 'secundária'}.`,
-        ],
-      },
-    })
-  }
+export function createWalletForUser(db: MockDb, userId: string, input: CreateWalletInput): Wallet {
+  const wallets = db.walletsByUser[userId] ?? []
+  const address = input.address.trim()
+  assertWalletSlot(wallets, { address, network: input.network, role: input.role })
 
   const wallet: Wallet = {
     id: `wallet-${crypto.randomUUID().slice(0, 8)}`,
     label: input.label.trim(),
-    address: normalizedAddress,
+    address,
     ens: input.ens?.trim() ? input.ens.trim() : null,
     provider: input.provider,
-    holder: {
-      displayName: input.holder.displayName.trim(),
-      profileName: input.holder.profileName.trim(),
-      email: input.holder.email.trim().toLowerCase(),
-      ensName: input.holder.ensName.trim().replace(/\.eth$/i, ''),
-      referralCode: input.holder.referralCode.trim(),
-    },
+    holder: normalizeHolder(input.holder),
     network: input.network,
     role: input.role,
     version: 1,
   }
 
-  wallets.push(wallet)
-  db.walletsByUser[userId] = wallets
+  db.walletsByUser[userId] = [...wallets, wallet]
   return wallet
 }
 
@@ -207,79 +195,38 @@ export function updateWalletForUser(
   walletId: string,
   input: UpdateWalletInput,
 ): Wallet {
-  for (const [ownerId, list] of Object.entries(db.walletsByUser)) {
-    const found = list.find((w) => w.id === walletId)
-    if (found && ownerId !== userId) {
-      throw new MockHttpError({
-        status: 403,
-        code: 'FORBIDDEN',
-        message: 'Você não tem permissão para editar esta carteira.',
-      })
-    }
+  const ownerId = Object.entries(db.walletsByUser).find(([, list]) =>
+    list.some((wallet) => wallet.id === walletId),
+  )?.[0]
+  if (ownerId && ownerId !== userId) {
+    throw new MockHttpError({
+      status: 403,
+      code: 'FORBIDDEN',
+      message: 'Você não tem permissão para editar esta carteira.',
+    })
   }
 
   const wallets = db.walletsByUser[userId] ?? []
-  const wallet = wallets.find((w) => w.id === walletId)
+  const wallet = wallets.find((candidate) => candidate.id === walletId)
   if (!wallet) {
-    throw new MockHttpError({
-      status: 404,
-      code: 'NOT_FOUND',
-      message: 'Carteira não encontrada.',
-    })
+    throw new MockHttpError({ status: 404, code: 'NOT_FOUND', message: 'Carteira não encontrada.' })
   }
 
-  const nextNetwork = input.network ?? wallet.network
-  const nextAddress = input.address?.trim() ?? wallet.address
-  const nextRole = input.role ?? wallet.role
-
-  if (!isValidWalletAddressForNetwork(nextAddress, nextNetwork)) {
-    throw new MockHttpError({
-      status: 422,
-      code: 'VALIDATION_FAILED',
-      message: VALIDATION_MESSAGES.invalidAddress,
-      fieldErrors: { address: [VALIDATION_MESSAGES.invalidAddress] },
-    })
+  const next = {
+    id: wallet.id,
+    address: input.address?.trim() ?? wallet.address,
+    network: input.network ?? wallet.network,
+    role: input.role ?? wallet.role,
   }
-
-  if (
-    wallets.some((w) => w.id !== walletId && w.address.toLowerCase() === nextAddress.toLowerCase())
-  ) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'WALLET_CONFLICT',
-      message: 'Este endereço de carteira já está cadastrado.',
-      fieldErrors: { address: ['Este endereço de carteira já está cadastrado.'] },
-    })
-  }
-
-  if (wallets.some((w) => w.id !== walletId && w.role === nextRole)) {
-    throw new MockHttpError({
-      status: 409,
-      code: 'WALLET_CONFLICT',
-      message: `Você já possui uma carteira ${nextRole === 'primary' ? 'principal' : 'secundária'}.`,
-      fieldErrors: {
-        role: [
-          `Você já possui uma carteira ${nextRole === 'primary' ? 'principal' : 'secundária'}.`,
-        ],
-      },
-    })
-  }
+  assertWalletSlot(wallets, next)
 
   if (input.label !== undefined) wallet.label = input.label.trim()
-  wallet.address = nextAddress
   if (input.ens !== undefined) wallet.ens = input.ens?.trim() ? input.ens.trim() : null
-  wallet.network = nextNetwork
   if (input.provider !== undefined) wallet.provider = input.provider
-  wallet.role = nextRole
-  if (input.holder !== undefined) {
-    wallet.holder = {
-      displayName: input.holder.displayName.trim(),
-      profileName: input.holder.profileName.trim(),
-      email: input.holder.email.trim().toLowerCase(),
-      ensName: input.holder.ensName.trim().replace(/\.eth$/i, ''),
-      referralCode: input.holder.referralCode.trim(),
-    }
-  }
+  if (input.holder !== undefined) wallet.holder = normalizeHolder(input.holder)
+  wallet.address = next.address
+  wallet.network = next.network
+  wallet.role = next.role
   wallet.version += 1
 
   return wallet

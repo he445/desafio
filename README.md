@@ -58,30 +58,29 @@ Qualquer outro código retorna `422 COUPON_INVALID`.
 
 ## Cenários do servidor simulado (MSW)
 
-A seleção de cenário pode ser feita de três formas:
+- `?scenario=<id>` na URL aplica o cenário no boot, grava em `localStorage` e tira o parâmetro da URL com `history.replaceState`. Id desconhecido é ignorado.
+- `?reset=1` restaura o seed (48 NFTs) no boot e apaga a sessão, o carrinho de visitante e as tentativas de checkout guardadas no navegador. Com `&scenario=<id>`, já aplica o cenário.
+- O painel flutuante "Cenários", visível só com os mocks ligados, troca o cenário e reseta o banco (as duas ações recarregam a página). Também muda o preço do Emerald Ape #042 para 1.35 ETH, derruba o WebSocket por 2,5 s e expira a sessão.
+- Nos testes, tudo isso passa por `window.__mock` (`setScenario`, `reset`, `setRules`, `hold`, `release`, `changeEdition`, `resolveOrder`, `emitRaw`, `dropSockets`, `expireSession`, `countOrders`).
 
-1. **Pela URL:** adicionando `?scenario=<id>` (ex.: `/?scenario=slow`). O boot aplica o cenário, persiste em `localStorage` e limpa o parâmetro da URL com `history.replaceState`.
-2. **Reset pela URL:** adicionando `?reset=1` (ou `?reset=1&scenario=default`), que restaura o seed original de 48 NFTs, limpa sessões/carrinhos locais e recarrega a aplicação.
-3. **Pelo painel flutuante "Cenários"** (ou via `window.__mock` nos testes E2E): permite alternar o cenário ativo, resetar o banco e disparar eventos em tempo real (`changeEdition`, `resolveOrder`, `dropSockets`, `expireSession`).
-
-| ID do cenário           | Comportamento simulado                                                                       | O que exercita                                                         |
-| ----------------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `default`               | Latência de 40–120 ms; pedido confirma 1,5 s após `pending`                                  | Fluxo padrão e auditoria Lighthouse                                    |
-| `empty-catalog`         | Banco inicializado sem NFTs                                                                  | Estado vazio do catálogo                                               |
-| `slow`                  | Latência de 1,5–3 s em todas as rotas                                                        | Skeletons com efeito shimmer                                           |
-| `race`                  | Listagem `GET /nfts` com latência inversa ao tamanho de `q`                                  | Cancelamento e descarte de respostas fora de ordem                     |
-| `flaky`                 | Primeira chamada de cada `GET` falha com HTTP 503                                            | Retry automático do TanStack Query                                     |
-| `server-error`          | `GET /nfts` retorna sempre HTTP 500                                                          | Estado de erro de rota com botão "Tentar novamente"                    |
-| `offline`               | Todo REST falha na conexão e o WebSocket recusa handshake                                    | Tratamento de indisponibilidade de rede                                |
-| `session-expired`       | Sessão expira 60 s após o login                                                              | Expiração durante navegação/checkout com retomada                      |
-| `price-change-checkout` | Primeiro `POST /orders` retorna `409 QUOTE_OUTDATED` e emite `nft.updated`                   | Revalidação de cotação no checkout                                     |
-| `sold-out-checkout`     | Edição esgota entre a cotação e o envio do pedido (`409 AVAILABILITY_CONFLICT`)              | Tratamento de conflito de estoque no checkout                          |
-| `order-timeout`         | `POST /orders` cria o pedido e segura a resposta por 10 s (acima do timeout de 8 s do Axios) | Recuperação do mesmo pedido por `Idempotency-Key` sem compra duplicada |
-| `payment-declined`      | Pedido transita de `pending` para `rejected` (`insufficient_funds`)                          | Recusa de pagamento com preservação dos itens no carrinho              |
-| `wallet-rejected`       | `POST /wallet-connections` retorna `409 WALLET_REJECTED`                                     | Recusa de assinatura/conexão na carteira                               |
-| `wallet-disconnect`     | Conexão da carteira cai antes do envio de `POST /orders` (`409 WALLET_DISCONNECTED`)         | Reconexão de carteira antes de confirmar                               |
-| `socket-drop`           | WebSocket cai com pedido pendente e a confirmação ocorre durante a queda                     | Reconciliação via REST ao reconectar/recarregar                        |
-| `duplicate-events`      | Todo evento Socket.IO é emitido duas vezes, seguido de um evento com versão anterior         | Deduplicação por `eventId` e proteção contra regressão de `version`    |
+| Id                      | O que faz                                                                                                                                                    | Exercita                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------ |
+| `default`               | Latência de 40 a 120 ms; o pedido confirma 1,5 s depois de criado                                                                                            | Fluxo feliz e Lighthouse             |
+| `empty-catalog`         | Banco sem NFTs                                                                                                                                               | Catálogo vazio                       |
+| `slow`                  | Latência de 1,5 a 3 s em todas as rotas                                                                                                                      | Skeletons                            |
+| `race`                  | `GET /nfts` com latência inversa ao tamanho de `q`                                                                                                           | Respostas fora de ordem              |
+| `flaky`                 | A primeira chamada de cada `GET` responde `503`                                                                                                              | Retry e recuperação                  |
+| `server-error`          | `GET /nfts` responde sempre `500`                                                                                                                            | Erro com "Tentar novamente"          |
+| `offline`               | Todo REST falha na conexão e o WebSocket recusa o handshake                                                                                                  | Indisponibilidade                    |
+| `session-expired`       | A sessão expira 60 s depois do login                                                                                                                         | Expiração na navegação e no checkout |
+| `price-change-checkout` | O primeiro `POST /orders` de cada usuário sobe em 0.15 ETH o preço da primeira linha, emite `nft.updated` e responde `409 QUOTE_OUTDATED` com a cotação nova | Revalidação com nova confirmação     |
+| `sold-out-checkout`     | O primeiro `POST /orders` esgota a edição da primeira linha e responde `409 AVAILABILITY_CONFLICT`                                                           | Conflito de estoque no pedido        |
+| `order-timeout`         | `POST /orders` cria o pedido e só responde depois de 10 s (o timeout do Axios é 8 s)                                                                         | Recuperação pela `Idempotency-Key`   |
+| `payment-declined`      | O pedido vai a `rejected` com `insufficient_funds`                                                                                                           | Recusa com carrinho preservado       |
+| `wallet-rejected`       | `POST /wallet-connections` responde `409 WALLET_REJECTED`                                                                                                    | Recusa na carteira                   |
+| `wallet-disconnect`     | No primeiro `POST /orders`, a conexão da carteira cai (`409 WALLET_DISCONNECTED`); depois de reconectar, segue                                               | Reconexão da carteira                |
+| `socket-drop`           | 250 ms depois do pedido, o socket cai e recusa conexões por 1,5 s; a confirmação acontece nesse intervalo                                                    | Reconciliação via REST               |
+| `duplicate-events`      | Todo evento sai duas vezes, seguido de uma cópia com versão anterior                                                                                         | Deduplicação e versão                |
 
 ## Comandos disponíveis
 
