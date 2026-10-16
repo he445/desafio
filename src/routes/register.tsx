@@ -1,15 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { z } from 'zod'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
-
-const RegisterSearchSchema = z.object({
-  redirect: z
-    .string()
-    .optional()
-    .transform((val) => (val && val.startsWith('/') && !val.startsWith('//') ? val : undefined))
-    .catch(undefined),
-})
+import { RegisterSearchSchema } from '@/features/auth/search'
 
 function RegisterPage() {
   return (
@@ -21,10 +13,10 @@ function RegisterPage() {
 }
 
 export const Route = createFileRoute('/register')({
-  validateSearch: (search) => RegisterSearchSchema.parse(search),
+  validateSearch: RegisterSearchSchema,
   beforeLoad: ({ context, search }) => {
     if (context.session) {
-      throw redirect({ to: search.redirect || '/' })
+      throw redirect({ href: search.redirect ?? '/' })
     }
   },
   head: () => ({

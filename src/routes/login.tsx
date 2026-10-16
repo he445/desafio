@@ -1,16 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { z } from 'zod'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
-
-const LoginSearchSchema = z.object({
-  redirect: z
-    .string()
-    .optional()
-    .transform((val) => (val && val.startsWith('/') && !val.startsWith('//') ? val : undefined))
-    .catch(undefined),
-  reason: z.enum(['expired']).optional().catch(undefined),
-})
+import { LoginSearchSchema } from '@/features/auth/search'
 
 function LoginPage() {
   const { reason } = Route.useSearch()
@@ -33,10 +24,10 @@ function LoginPage() {
 }
 
 export const Route = createFileRoute('/login')({
-  validateSearch: (search) => LoginSearchSchema.parse(search),
+  validateSearch: LoginSearchSchema,
   beforeLoad: ({ context, search }) => {
     if (context.session) {
-      throw redirect({ to: search.redirect || '/' })
+      throw redirect({ href: search.redirect ?? '/' })
     }
   },
   head: () => ({

@@ -6,13 +6,7 @@ export const RESUME_STORAGE_KEY = 'nftmkt:resume'
 
 export interface ResumeContext {
   href: string
-  reason: 'expired' | 'auth'
-}
-
-export interface CheckoutAttempt {
-  key: string
-  quoteId: string
-  bodyHash: string
+  reason: 'expired'
 }
 
 export function getStoredSession(): Session | null {
@@ -78,63 +72,4 @@ export function consumeResumeContext(): ResumeContext | null {
   } catch {
     return null
   }
-}
-
-export function getSafeRedirectPath(redirectParam: string | undefined | null): string {
-  if (!redirectParam) return '/'
-  const trimmed = redirectParam.trim()
-  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
-    return trimmed
-  }
-  try {
-    const url = new URL(trimmed, window.location.origin)
-    if (url.origin === window.location.origin) {
-      return `${url.pathname}${url.search}${url.hash}`
-    }
-  } catch {
-    // Fallback to root
-  }
-  return '/'
-}
-
-export function getCheckoutAttempt(userId: string): CheckoutAttempt | null {
-  if (typeof window === 'undefined') return null
-  const raw = window.localStorage.getItem(`checkout-attempt:${userId}`)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as CheckoutAttempt
-  } catch {
-    return null
-  }
-}
-
-export function saveCheckoutAttempt(userId: string, attempt: CheckoutAttempt): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.setItem(`checkout-attempt:${userId}`, JSON.stringify(attempt))
-}
-
-export function clearCheckoutAttempt(userId: string): void {
-  if (typeof window === 'undefined') return
-  window.localStorage.removeItem(`checkout-attempt:${userId}`)
-}
-
-export function saveCheckoutDraft<T>(userId: string, draft: T): void {
-  if (typeof window === 'undefined') return
-  window.sessionStorage.setItem(`nftmkt:checkout-draft:${userId}`, JSON.stringify(draft))
-}
-
-export function loadCheckoutDraft<T>(userId: string): T | null {
-  if (typeof window === 'undefined') return null
-  const raw = window.sessionStorage.getItem(`nftmkt:checkout-draft:${userId}`)
-  if (!raw) return null
-  try {
-    return JSON.parse(raw) as T
-  } catch {
-    return null
-  }
-}
-
-export function clearCheckoutDraft(userId: string): void {
-  if (typeof window === 'undefined') return
-  window.sessionStorage.removeItem(`nftmkt:checkout-draft:${userId}`)
 }
