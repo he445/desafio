@@ -54,12 +54,12 @@ export function shortenAddress(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`
 }
 
+// The receipt shows the buyer's calendar day, so the date is read in local time.
 export function formatReceiptDate(isoDate: string): string {
   const date = new Date(isoDate)
-  const day = date.getUTCDate().toString().padStart(2, '0')
-  const month = MONTHS_PT[date.getUTCMonth()] ?? 'Jan'
-  const year = date.getUTCFullYear()
-  return `${day} ${month}, ${year}`
+  const day = date.getDate().toString().padStart(2, '0')
+  const month = MONTHS_PT[date.getMonth()] ?? ''
+  return `${day} ${month}, ${date.getFullYear()}`
 }
 
 export function formatFacetCount(count: number): string {

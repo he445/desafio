@@ -29,4 +29,10 @@ describe('format helpers', () => {
     expect(formatReceiptDate('2026-07-29T12:00:00.000Z')).toBe('29 Jul, 2026')
     expect(formatFacetCount(33)).toBe('(33)')
   })
+
+  it('dates the receipt by the local calendar day', () => {
+    // vitest.config.ts runs the suite in America/Sao_Paulo (UTC-3).
+    expect(formatReceiptDate('2026-07-30T01:30:00.000Z')).toBe('29 Jul, 2026')
+    expect(formatReceiptDate('2026-12-31T23:30:00.000-03:00')).toBe('31 Dez, 2026')
+  })
 })
