@@ -183,7 +183,13 @@ Configuração base do `QueryClient` em `src/app/query-client.ts`:
 
 ## 8. Reconciliação REST e Socket.IO
 
-A ser detalhada nas Fases 7 e 8 com o `event-ledger` no cliente.
+`src/features/realtime/event-ledger.ts` guarda os últimos 500 `eventId` e a maior `version` conhecida de cada NFT e pedido, venha ela de uma resposta REST ou de um evento. As respostas de carrinho e cotação registram a `nftVersion` de cada linha (`recordResourceVersion`).
+
+- `shouldAcceptEvent` descarta um `eventId` repetido e um evento cuja `version` não passa da conhecida. Um id que saiu da janela de 500 continua barrado pela versão.
+- `markSideEffectOnce` libera toast, navegação ou anúncio uma vez por recurso e versão, e nunca para uma versão mais antiga do que uma que já rodou.
+- Login, logout e troca de usuário zeram o ledger junto com o cache privado.
+
+A aplicação dos eventos no cache do TanStack Query entra com o cliente Socket.IO.
 
 ## 9. Idempotência e revalidação de pedidos
 
