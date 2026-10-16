@@ -1,6 +1,6 @@
 import { CartPage, seedGuestCart } from '../support/cart'
 import { CatalogPage } from '../support/catalog'
-import { expect, gotoReady, test } from '../support/fixtures'
+import { expect, gotoReady, signInThroughApi, test, USERS } from '../support/fixtures'
 
 const isNftList = (url: string) => new URL(url).pathname === '/api/v1/nfts'
 const isCart = (url: string) => new URL(url).pathname === '/api/v1/cart'
@@ -41,6 +41,17 @@ test.describe('slow network', () => {
     await expect(cart.checkout).toHaveAttribute('aria-disabled', 'true')
     await expect(cart.summaryValue('Total')).toHaveText('1.206 ETH')
     await expect(page.getByText('Atualizando o resumo…')).toHaveCount(0)
+  })
+  test('the profile shows its skeleton and then the form', async ({ page }) => {
+    await gotoReady(page, '/')
+    await signInThroughApi(page, USERS.rafael)
+    await gotoReady(page, '/profile')
+
+    await expect(page.getByText('Carregando perfil…')).toBeAttached()
+    await expect(page.getByRole('textbox', { name: 'Nome de usuário', exact: true })).toHaveValue(
+      'rafael',
+    )
+    await expect(page.getByText('Carregando perfil…')).toHaveCount(0)
   })
 })
 
@@ -166,4 +177,29 @@ test('the cart summary explains a failed quote and recovers on demand', async ({
   await alert.getByRole('button', { name: 'Tentar novamente' }).click()
   await expect(cart.summaryValue('Total')).toHaveText('2.396 ETH')
   await expect(cart.checkout).not.toHaveAttribute('aria-disabled')
+})
+
+test('the wallets page explains a failure and recovers on demand', async ({ page, mock }) => {
+  await gotoReady(page, '/')
+  await signInThroughApi(page, USERS.marina)
+  await gotoReady(page, '/profile')
+  await mock.setRules([
+    {
+      match: { method: 'GET', path: '/me/wallets' },
+      fail: { kind: 'http', status: 500, code: 'INTERNAL' },
+    },
+  ])
+  // The rules live in the page, so the wallets page opens by client-side navigation.
+  await page.getByRole('link', { name: 'Carteiras', exact: true }).first().click()
+
+  const alert = page.getByRole('alert')
+  await expect(alert).toContainText('Não foi possível carregar as carteiras')
+  await mock.clearRules()
+  await alert.getByRole('button', { name: 'Tentar novamente' }).click()
+  await expect(
+    page
+      .getByRole('form', { name: 'Formulário da carteira principal' })
+      .getByRole('textbox', { name: 'Apelido da carteira', exact: true }),
+  ).not.toHaveValue('')
+  await expect(page.getByRole('alert')).toHaveCount(0)
 })
