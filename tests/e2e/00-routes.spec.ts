@@ -7,7 +7,13 @@ interface RouteCase {
 }
 
 const PUBLIC_ROUTES: RouteCase[] = [
-  { path: '/', heading: 'SEJA DONO DO FUTURO DA ARTE DIGITAL' },
+  {
+    path: '/',
+    heading: {
+      desktop: 'SEJA DONO DO FUTURO DA ARTE DIGITAL',
+      mobile: 'SEJA DONO DA CULTURA DIGITAL',
+    },
+  },
   { path: '/nft/emerald-ape-042', heading: 'Emerald Ape #042' },
   { path: '/nft/nft-que-nao-existe', heading: 'NFT não encontrado' },
   { path: '/cart', heading: 'Carrinho de NFTs' },

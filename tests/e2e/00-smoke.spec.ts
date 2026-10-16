@@ -1,9 +1,12 @@
 import { expect, gotoReady, test } from '../support/fixtures'
 
-test('boots the mock before rendering and survives a refresh on a deep route', async ({ page }) => {
+test('boots the mock before rendering and survives a refresh on a deep route', async ({
+  page,
+  isMobile,
+}) => {
   await gotoReady(page, '/')
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'SEJA DONO DO FUTURO DA ARTE DIGITAL',
+    isMobile ? 'SEJA DONO DA CULTURA DIGITAL' : 'SEJA DONO DO FUTURO DA ARTE DIGITAL',
   )
 
   await gotoReady(page, '/cart')

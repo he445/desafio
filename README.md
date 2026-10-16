@@ -2,7 +2,7 @@
 
 Marketplace de NFTs da Kurio em React 19 e TypeScript 6, com TanStack Router, TanStack Query e Axios. Não há backend: o MSW 2 simula a API REST no Service Worker e um servidor Socket.IO no WebSocket da própria aba, com banco em `localStorage`, regras de estoque, cotação e pedido, e cenários de falha que se trocam pela URL ou por um painel.
 
-Até aqui estão prontos o servidor simulado (31 rotas REST, eventos e 16 cenários) e a casca da aplicação: layout desktop e mobile, todas as rotas, sessão no boot, proteção das rotas privadas e as telas de 404. As telas de catálogo, carrinho, pagamento, pedido e conta ainda mostram só o título e a navegação, o detalhe mostra o nome do NFT vindo da API, e o cliente Socket.IO ainda não está ligado.
+Até aqui estão prontos o servidor simulado (31 rotas REST, eventos e 16 cenários), a casca da aplicação e o Início: hero, catálogo com busca, filtros, abas, ordenação e paginação na URL, promoções e blog, em desktop e mobile. As telas de carrinho, pagamento, pedido e conta ainda mostram só o título e a navegação, o detalhe mostra o nome do NFT vindo da API, e o cliente Socket.IO ainda não está ligado.
 
 - Demonstração: [desafio-rosy-kappa.vercel.app](https://desafio-rosy-kappa.vercel.app)
 - Repositório: [github.com/he445/desafio](https://github.com/he445/desafio)

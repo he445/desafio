@@ -3,10 +3,13 @@ import { CatalogSearchSchema, DEFAULT_CATALOG_SEARCH } from '@/contracts'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
 import { HomeDesktop } from '@/features/catalog/components/home-desktop'
+import { HomeMobile } from '@/features/catalog/components/home-mobile'
 import { featuredQueryOptions, nftListQueryOptions } from '@/features/catalog/queries'
+import { useIsDesktop } from '@/lib/use-media-query'
 
 function HomePage() {
-  return <HomeDesktop />
+  const isDesktop = useIsDesktop()
+  return isDesktop ? <HomeDesktop /> : <HomeMobile />
 }
 
 export const Route = createFileRoute('/')({
