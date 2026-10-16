@@ -149,7 +149,7 @@ export function getAuthenticatedUser(
     throw new MockHttpError({
       status: 401,
       code: 'SESSION_EXPIRED',
-      message: VALIDATION_MESSAGES.sessionExpiredBanner,
+      message: 'Sessão expirada. Entre novamente.',
     })
   }
 

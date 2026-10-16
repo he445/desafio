@@ -104,6 +104,33 @@ export default tseslint.config(
     },
   },
   {
+    files: ['src/contracts/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [noAxios],
+          patterns: [
+            noMocks,
+            {
+              group: [
+                '@/app/**',
+                '@/routes/**',
+                '@/features/**',
+                '@/components/**',
+                '@/content/**',
+                '@/lib/*',
+                '!@/lib/eth',
+              ],
+              message:
+                'contracts/ is shared with mocks/, so it only depends on zod and lib/eth.ts.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ['src/mocks/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PasswordSchema, VALIDATION_MESSAGES } from './index'
 import { CatalogSearchSchema } from './nfts'
 
 describe('CatalogSearchSchema', () => {
@@ -18,5 +19,17 @@ describe('CatalogSearchSchema', () => {
       q: { nested: true },
     })
     expect(search).toEqual({ tab: 'all', status: 'all', sort: 'recent', page: 1, pageSize: 9 })
+  })
+})
+
+describe('PasswordSchema', () => {
+  it('explains which rule failed', () => {
+    const issues = (value: string) =>
+      PasswordSchema.safeParse(value).error?.issues.map((issue) => issue.message) ?? []
+
+    expect(issues('Ab1')).toContain(VALIDATION_MESSAGES.passwordMin)
+    expect(issues('abcdefgh')).toEqual([VALIDATION_MESSAGES.passwordLetterAndDigit])
+    expect(issues('12345678')).toEqual([VALIDATION_MESSAGES.passwordLetterAndDigit])
+    expect(issues('Senha@1234')).toEqual([])
   })
 })

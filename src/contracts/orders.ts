@@ -1,10 +1,10 @@
 import { z } from 'zod'
-import { copy } from '@/content/copy'
 import {
   EthAmountSchema,
   HolderSchema,
   isValidWalletAddressForNetwork,
   NetworkIdSchema,
+  VALIDATION_MESSAGES,
   WalletProviderSchema,
 } from './common'
 import { PasswordSchema } from './auth'
@@ -64,14 +64,14 @@ export const OrderSchema = z.object({
 export type Order = z.infer<typeof OrderSchema>
 
 export const BuyerSchema = HolderSchema.extend({
-  username: z.string().trim().min(1, copy.validation.required),
+  username: z.string().trim().min(1, VALIDATION_MESSAGES.required),
   note: z.string().nullable(),
 })
 export type Buyer = z.infer<typeof BuyerSchema>
 
 export const CreateOrderInputSchema = z.object({
-  quoteId: z.string().min(1, copy.validation.required),
-  connectionId: z.string().min(1, copy.validation.required),
+  quoteId: z.string().min(1, VALIDATION_MESSAGES.required),
+  connectionId: z.string().min(1, VALIDATION_MESSAGES.required),
   buyer: BuyerSchema,
 })
 export type CreateOrderInput = z.infer<typeof CreateOrderInputSchema>
@@ -82,7 +82,7 @@ export const PendingOrdersResponseSchema = z.object({
 export type PendingOrdersResponse = z.infer<typeof PendingOrdersResponseSchema>
 
 export const WalletConnectionInputSchema = z.object({
-  walletId: z.string().min(1, copy.validation.required),
+  walletId: z.string().min(1, VALIDATION_MESSAGES.required),
   network: NetworkIdSchema,
   provider: WalletProviderSchema,
 })
@@ -110,11 +110,11 @@ export const ProfileSchema = z.object({
 export type Profile = z.infer<typeof ProfileSchema>
 
 export const UpdateProfileInputSchema = z.object({
-  displayName: z.string().trim().min(1, copy.validation.required),
-  username: z.string().trim().min(2, copy.validation.required),
-  email: z.email(copy.validation.invalidEmail),
+  displayName: z.string().trim().min(1, VALIDATION_MESSAGES.required),
+  username: z.string().trim().min(1, VALIDATION_MESSAGES.required),
+  email: z.email(VALIDATION_MESSAGES.invalidEmail),
   ensName: z.string().trim().nullable(),
-  walletNickname: z.string().trim().min(1, copy.validation.required),
+  walletNickname: z.string().trim().min(1, VALIDATION_MESSAGES.required),
 })
 export type UpdateProfileInput = z.infer<typeof UpdateProfileInputSchema>
 
@@ -124,7 +124,7 @@ export const AvatarResponseSchema = z.object({
 export type AvatarResponse = z.infer<typeof AvatarResponseSchema>
 
 export const ChangePasswordInputSchema = z.object({
-  currentPassword: z.string().min(1, copy.validation.required),
+  currentPassword: z.string().min(1, VALIDATION_MESSAGES.required),
   newPassword: PasswordSchema,
 })
 export type ChangePasswordInput = z.infer<typeof ChangePasswordInputSchema>
@@ -152,8 +152,8 @@ export type WalletsResponse = z.infer<typeof WalletsResponseSchema>
 
 export const CreateWalletInputSchema = z
   .object({
-    label: z.string().trim().min(1, copy.validation.required),
-    address: z.string().trim().min(1, copy.validation.required),
+    label: z.string().trim().min(1, VALIDATION_MESSAGES.required),
+    address: z.string().trim().min(1, VALIDATION_MESSAGES.required),
     ens: z.string().trim().nullable(),
     network: NetworkIdSchema,
     provider: WalletProviderSchema,
@@ -161,14 +161,14 @@ export const CreateWalletInputSchema = z
     holder: HolderSchema,
   })
   .refine((data) => isValidWalletAddressForNetwork(data.address, data.network), {
-    message: copy.validation.invalidAddress,
+    message: VALIDATION_MESSAGES.invalidAddress,
     path: ['address'],
   })
 export type CreateWalletInput = z.infer<typeof CreateWalletInputSchema>
 
 export const UpdateWalletInputSchema = z.object({
-  label: z.string().trim().min(1, copy.validation.required).optional(),
-  address: z.string().trim().min(1, copy.validation.required).optional(),
+  label: z.string().trim().min(1, VALIDATION_MESSAGES.required).optional(),
+  address: z.string().trim().min(1, VALIDATION_MESSAGES.required).optional(),
   ens: z.string().trim().nullable().optional(),
   network: NetworkIdSchema.optional(),
   provider: WalletProviderSchema.optional(),

@@ -4,6 +4,7 @@ export const VALIDATION_MESSAGES = {
   required: 'Campo obrigatório',
   invalidEmail: 'E-mail inválido',
   passwordMin: 'A senha precisa de pelo menos 8 caracteres',
+  passwordLetterAndDigit: 'A senha precisa ter letras e números',
   passwordMismatch: 'As senhas não conferem',
   invalidAddress: 'Endereço inválido para a rede escolhida',
   usernameTaken: 'Nome de usuário já em uso',
@@ -12,8 +13,6 @@ export const VALIDATION_MESSAGES = {
   wrongPassword: 'Senha atual incorreta',
   couponInvalid: 'Código promocional inválido',
   couponExpired: 'Código promocional expirado',
-  sessionExpiredBanner: 'Sua sessão expirou. Entre novamente para continuar.',
-  emptyCart: 'Seu carrinho está vazio',
 } as const
 
 export const EthAmountSchema = z.string().regex(/^(0|[1-9]\d*)(\.\d{1,18})?$/, 'Valor ETH inválido')

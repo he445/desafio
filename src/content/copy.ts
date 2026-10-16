@@ -1,3 +1,5 @@
+import { VALIDATION_MESSAGES } from '@/contracts'
+
 export const copy = {
   brand: {
     logo: 'KURIO',
@@ -356,17 +358,5 @@ export const copy = {
     nftNotFoundTitle: 'NFT não encontrado',
     backToMarket: 'Voltar ao mercado',
   },
-  validation: {
-    required: 'Campo obrigatório',
-    invalidEmail: 'E-mail inválido',
-    passwordMin: 'A senha precisa de pelo menos 8 caracteres',
-    passwordMismatch: 'As senhas não conferem',
-    invalidAddress: 'Endereço inválido para a rede escolhida',
-    usernameTaken: 'Nome de usuário já em uso',
-    emailTaken: 'E-mail já cadastrado',
-    invalidCredentials: 'E-mail ou senha incorretos',
-    wrongPassword: 'Senha atual incorreta',
-    couponInvalid: 'Código promocional inválido',
-    couponExpired: 'Código promocional expirado',
-  },
+  validation: VALIDATION_MESSAGES,
 } as const

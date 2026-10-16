@@ -1,10 +1,11 @@
 import { z } from 'zod'
-import { copy } from '@/content/copy'
+import { VALIDATION_MESSAGES } from './common'
 
 export const PasswordSchema = z
   .string()
-  .min(8, copy.validation.passwordMin)
-  .regex(/^(?=.*[A-Za-z])(?=.*\d).+$/, copy.validation.passwordMin)
+  .min(8, VALIDATION_MESSAGES.passwordMin)
+  .regex(/[A-Za-z]/, VALIDATION_MESSAGES.passwordLetterAndDigit)
+  .regex(/\d/, VALIDATION_MESSAGES.passwordLetterAndDigit)
 
 export const UserSummarySchema = z.object({
   id: z.string(),
@@ -29,14 +30,14 @@ export const AuthResponseSchema = z.object({
 export type AuthResponse = z.infer<typeof AuthResponseSchema>
 
 export const LoginInputSchema = z.object({
-  email: z.email(copy.validation.invalidEmail),
-  password: z.string().min(1, copy.validation.required),
+  email: z.email(VALIDATION_MESSAGES.invalidEmail),
+  password: z.string().min(1, VALIDATION_MESSAGES.required),
 })
 export type LoginInput = z.infer<typeof LoginInputSchema>
 
 export const RegisterInputSchema = z.object({
-  username: z.string().trim().min(2, copy.validation.required),
-  email: z.email(copy.validation.invalidEmail),
+  username: z.string().trim().min(1, VALIDATION_MESSAGES.required),
+  email: z.email(VALIDATION_MESSAGES.invalidEmail),
   password: PasswordSchema,
 })
 export type RegisterInput = z.infer<typeof RegisterInputSchema>

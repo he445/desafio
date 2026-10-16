@@ -334,7 +334,7 @@ export function createQuoteForCart(
     throw new MockHttpError({
       status: 409,
       code: 'BAD_REQUEST',
-      message: VALIDATION_MESSAGES.emptyCart,
+      message: 'O carrinho está vazio.',
     })
   }
 
