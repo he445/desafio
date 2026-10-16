@@ -30,6 +30,20 @@ export class CheckoutPage {
     return this.page.getByRole('region', { name: 'Os valores mudaram desde a sua revisão.' })
   }
 
+  get receipt(): Locator {
+    return this.page.getByRole('dialog', { name: 'Seus NFTs agora estão na sua carteira' })
+  }
+
+  get orderPath(): RegExp {
+    return /\/orders\/order-[\w-]+$/
+  }
+
+  async confirmPurchase(): Promise<void> {
+    await expect(this.confirm).not.toHaveAttribute('aria-disabled')
+    await this.confirm.click()
+    await expect(this.page).toHaveURL(this.orderPath)
+  }
+
   async connect(name: string): Promise<void> {
     await this.provider(name).click()
     await expect(this.provider(name)).toContainText('Conectada')

@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import { recordAnnouncements } from '../support/announcements'
+import { CheckoutPage } from '../support/checkout'
 import { expect, loginAs, test } from '../support/fixtures'
 import { EMERALD, NftDetailPage } from '../support/nft-detail'
 
@@ -103,4 +104,45 @@ test('the socket follows the session: authenticated after login, anonymous after
   await expect(page).toHaveURL('/')
   await mock.waitForSocket(null)
   expect(await page.evaluate(() => window.__mock?.listSockets())).not.toContain('user-marina')
+})
+
+test.describe('socket drops with the order pending', () => {
+  test.use({ scenario: 'socket-drop' })
+
+  test('the confirmation that happened during the drop shows after reconnecting', async ({
+    page,
+    mock,
+  }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.openWithCart([{ ...FIFTY, quantity: 1 }])
+    await checkout.connect('MetaMask')
+    await mock.waitForSocket('user-marina')
+
+    await checkout.confirmPurchase()
+
+    await expect(checkout.receipt).toBeVisible()
+    expect(await mock.countOrders('user-marina')).toBe(1)
+  })
+})
+
+test.describe('refresh while the order request is in flight', () => {
+  test.use({ scenario: 'order-timeout' })
+
+  test('the checkout lands on the same pending order instead of buying again', async ({
+    page,
+    mock,
+  }) => {
+    const checkout = new CheckoutPage(page)
+    await checkout.openWithCart([{ ...FIFTY, quantity: 1 }])
+    await checkout.connect('MetaMask')
+
+    await checkout.confirm.click()
+    await expect(page.getByRole('button', { name: 'Processando…' })).toBeVisible()
+    await expect.poll(() => mock.countOrders('user-marina')).toBe(1)
+    await page.reload()
+
+    await expect(page).toHaveURL(checkout.orderPath)
+    await expect(checkout.receipt).toBeVisible()
+    expect(await mock.countOrders('user-marina')).toBe(1)
+  })
 })

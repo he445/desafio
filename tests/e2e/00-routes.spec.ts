@@ -4,6 +4,7 @@ import { expect, gotoReady, signInThroughApi, test } from '../support/fixtures'
 interface RouteCase {
   path: string
   heading: string | { desktop: string; mobile: string }
+  dialog?: string
 }
 
 const PUBLIC_ROUTES: RouteCase[] = [
@@ -27,7 +28,12 @@ const PUBLIC_ROUTES: RouteCase[] = [
 
 const PRIVATE_ROUTES: RouteCase[] = [
   { path: '/checkout', heading: { desktop: 'Pagamento', mobile: 'Pagamento com carteira' } },
-  { path: '/orders/order-seed-marina-1', heading: 'Pedido' },
+  {
+    path: '/orders/order-seed-marina-1',
+    heading: 'Pedido',
+    // A confirmed order opens its receipt by itself on the first visit.
+    dialog: 'Seus NFTs agora estão na sua carteira',
+  },
   { path: '/profile', heading: 'Meu perfil' },
   { path: '/wallets', heading: 'Carteiras' },
   { path: '/favorites', heading: 'Lista de interesse' },
@@ -63,6 +69,10 @@ test('a private route sends a visitor to the login and back after signing in', a
   for (const route of PRIVATE_ROUTES) {
     await gotoReady(page, route.path)
     await expect(page).toHaveURL(route.path)
+    if (route.dialog) {
+      await expect(page.getByRole('dialog', { name: route.dialog })).toBeVisible()
+      await page.keyboard.press('Escape')
+    }
     await expectSingleHeading(page, route.heading)
   }
 })

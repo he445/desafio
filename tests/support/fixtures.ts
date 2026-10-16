@@ -69,6 +69,12 @@ export class MockDriver {
     await this.page.evaluate((ms) => window.__mock?.dropSockets({ refuseForMs: ms }), refuseForMs)
   }
 
+  // Orders the user created during the test; the seeded history is left out.
+  async countOrders(userId: string): Promise<number> {
+    await this.ready()
+    return this.page.evaluate((id) => window.__mock?.countOrders(id) ?? 0, userId)
+  }
+
   // Every open session reaches its expiry now; the next private request answers 401.
   async expireSession(): Promise<void> {
     await this.ready()

@@ -1,8 +1,74 @@
+import { CartPage } from '../support/cart'
 import { CheckoutPage } from '../support/checkout'
-import { expect, test } from '../support/fixtures'
-import { EMERALD } from '../support/nft-detail'
+import { expect, gotoReady, loginAs, test } from '../support/fixtures'
+import { EMERALD, NftDetailPage } from '../support/nft-detail'
 
 const FIFTY = { nftId: EMERALD.id, editionId: EMERALD.editions.fifty, quantity: 1 }
+const GOLDEN = 'Golden Beat #207'
+
+test('a purchase goes from the detail page to a receipt that only shows once confirmed', async ({
+  page,
+  mock,
+}) => {
+  const detail = new NftDetailPage(page)
+  const checkout = new CheckoutPage(page)
+  await detail.open(`/nft/${EMERALD.id}?edition=${EMERALD.editions.fifty}`)
+  await detail.buy.click()
+  await expect(page).toHaveURL(/\/cart$/)
+  await new CartPage(page).checkout.click()
+  await loginAs(page, 'marina')
+  await page.waitForURL((url) => url.pathname === '/checkout')
+
+  await checkout.connect('MetaMask')
+  await checkout.confirmPurchase()
+
+  // The order starts pending; the receipt waits for the simulated confirmation.
+  await expect(page.getByText('Pagamento em processamento')).toBeVisible()
+  await expect(checkout.receipt).toHaveCount(0)
+  await expect(checkout.receipt).toBeVisible()
+  await expect(checkout.receipt).toContainText(EMERALD.title)
+  await expect(checkout.receipt).toContainText('Transação confirmada na Ethereum.')
+  expect(await mock.countOrders('user-marina')).toBe(1)
+
+  await page.keyboard.press('Escape')
+  await expect(checkout.receipt).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ver no Etherscan' }).click()
+  const explorer = page.getByRole('dialog', { name: 'Explorador (simulado)' })
+  await expect(explorer).toContainText(/0x[0-9a-f]{64}/)
+  await expect(page).toHaveURL(checkout.orderPath)
+  await page.keyboard.press('Escape')
+
+  // The receipt opens by itself once per order; after a refresh it is one button away.
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Ver recibo' })).toBeVisible()
+  await expect(checkout.receipt).toHaveCount(0)
+  await page.getByRole('button', { name: 'Ver recibo' }).click()
+  await expect(checkout.receipt).toBeVisible()
+})
+
+test('an item another tab adds during checkout stays in the cart after the purchase', async ({
+  page,
+  context,
+}) => {
+  const checkout = new CheckoutPage(page)
+  await checkout.openWithCart([FIFTY])
+  await checkout.connect('MetaMask')
+
+  const other = await context.newPage()
+  await gotoReady(other, '/nft/golden-beat-207')
+  await new NftDetailPage(other).buy.click()
+  await expect(other).toHaveURL(/\/cart$/)
+  await other.close()
+
+  await checkout.confirmPurchase()
+  await expect(checkout.receipt).toBeVisible()
+  await expect(checkout.receipt).not.toContainText(GOLDEN)
+
+  const cart = new CartPage(page)
+  await cart.open()
+  await expect(cart.lines).toHaveCount(1)
+  await expect(cart.lines.first()).toContainText(GOLDEN)
+})
 
 test('the desktop checkout fills the collector profile from the wallet and follows the network', async ({
   page,
