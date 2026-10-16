@@ -204,6 +204,17 @@ Padrões do `QueryClient` (`src/app/query-client.ts`):
 | `nftListQueryOptions`  | `['nfts', 'list', busca]` | 30 s          | `placeholderData: keepPreviousData`: a página anterior fica na tela enquanto a próxima carrega. O `signal` vai para o Axios, então a requisição de uma busca superada é abortada |
 | `featuredQueryOptions` | `['nfts', 'featured']`    | 60 s          | Hero e banner da barra lateral                                                                                                                                                   |
 
+### Catálogo: a URL é o estado
+
+- Filtros, aba, ordenação e página moram nos search params de `/` (`CatalogSearchSchema`): `q`, `collection`, `category`, `network`, `tab`, `minPrice`, `maxPrice`, `status`, `sort`, `page` e `pageSize`. Todo campo tem `.catch()`, então uma URL editada à mão volta ao padrão em vez de derrubar a rota, e o `stripSearchParams` tira da URL o que é padrão (`tab=all`, `sort=recent`, `page=1`, `pageSize=9`).
+- A requisição leva os mesmos parâmetros da URL mais os padrões, e o teste E2E confere a igualdade.
+- Mudar um filtro, a aba ou a ordenação volta para a página 1 (`applyCatalogChange`); só os links de paginação mexem em `page`.
+- Categoria, rede, aba e página são links de verdade, com `href`, e a opção ativa leva `aria-current` (`"true"` nos filtros, `"page"` na página atual). Clicar na categoria ativa a desfaz. Todos apontam para `#mercado`, então o router rola até o topo do catálogo.
+- Aplicar um filtro cria uma entrada no histórico, então voltar e avançar restauram a vista anterior, na URL e na tela.
+- O preço usa o slider do Radix em passos de 0,01 ETH, com `bigint`. Os limites vêm de `facets.priceRange`, calculados sobre o catálogo inteiro, e um slider parado nos limites não escreve nada na URL. O botão "Aplicar" grava `minPrice` e `maxPrice`.
+- As contagens de categoria e de rede vêm de `facets` e já descontam o próprio filtro: o número ao lado de "Música" é quantos NFTs a lista teria se a pessoa escolhesse "Música" com os outros filtros que já escolheu.
+- Busca e coleção não aparecem na barra lateral, então a grade mostra um chip por filtro ativo (`Busca: emerald`, `Coleção: Kurio Apes`) que é um link para removê-lo.
+
 ### Cache da listagem
 
 - A chave é a própria busca já validada (`['nfts', 'list', busca]`), então duas URLs que significam a mesma coisa compartilham o cache. O `staleTime` é de 30 s.
