@@ -196,11 +196,13 @@ Padrões do `QueryClient` (`src/app/query-client.ts`):
 - Até 2 novas tentativas, só quando `ApiError.retryable` é `true` (rede, timeout, HTTP 429, 500 e 503), com espera de `min(500 × 2^tentativa, 4000)` ms.
 - Mutations sem retry automático.
 
-| Consulta              | Chave                    | `staleTime`   | Revalidação                                                                |
-| --------------------- | ------------------------ | ------------- | -------------------------------------------------------------------------- |
-| `sessionQueryOptions` | `['session']`            | `Infinity`    | `refetchOnWindowFocus: 'always'`, sem retry; `401` vira `null`             |
-| `cartQueryOptions`    | `['cart', dono]`         | `0`           | No foco da janela; o contador do header lê a mesma consulta (`select`)     |
-| `nftQueryOptions`     | `['nfts', 'detail', id]` | padrão (30 s) | O loader de `/nft/$nftId` chama `ensureQueryData`; `404` vira `notFound()` |
+| Consulta               | Chave                     | `staleTime`   | Revalidação                                                                                                                                                                      |
+| ---------------------- | ------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sessionQueryOptions`  | `['session']`             | `Infinity`    | `refetchOnWindowFocus: 'always'`, sem retry; `401` vira `null`                                                                                                                   |
+| `cartQueryOptions`     | `['cart', dono]`          | `0`           | No foco da janela; o contador do header lê a mesma consulta (`select`)                                                                                                           |
+| `nftQueryOptions`      | `['nfts', 'detail', id]`  | padrão (30 s) | O loader de `/nft/$nftId` chama `ensureQueryData`; `404` vira `notFound()`                                                                                                       |
+| `nftListQueryOptions`  | `['nfts', 'list', busca]` | 30 s          | `placeholderData: keepPreviousData`: a página anterior fica na tela enquanto a próxima carrega. O `signal` vai para o Axios, então a requisição de uma busca superada é abortada |
+| `featuredQueryOptions` | `['nfts', 'featured']`    | 60 s          | Hero e banner da barra lateral                                                                                                                                                   |
 
 ## 8. Reconciliação REST e Socket.IO
 
