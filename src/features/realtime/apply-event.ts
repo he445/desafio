@@ -12,6 +12,7 @@ import { copy } from '@/content/copy'
 import { formatEthNumberDisplay } from '@/lib/format'
 import { qk } from '@/lib/query-keys'
 import { shouldAcceptEvent } from './event-ledger'
+import { clearCheckoutAttempt } from '@/features/orders/attempt'
 
 export interface AppliedEvent {
   event: RealtimeEvent
@@ -130,7 +131,11 @@ function applyOrderUpdated(queryClient: QueryClient, event: OrderUpdatedEvent): 
       : order,
   )
   void queryClient.invalidateQueries({ queryKey: keys.pendingOrders() })
-  if (event.data.status !== 'pending') void queryClient.invalidateQueries({ queryKey: ['cart'] })
+  if (event.data.status !== 'pending') {
+    // A finished order frees its key: the next confirmation is a new purchase.
+    clearCheckoutAttempt(event.userId)
+    void queryClient.invalidateQueries({ queryKey: ['cart'] })
+  }
 }
 
 // Schema, owner, duplicate and version gates run before anything touches the cache.

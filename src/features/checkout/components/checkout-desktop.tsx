@@ -46,7 +46,9 @@ export function CheckoutDesktop({ checkout, cart, profile, wallets }: CheckoutDe
     form.reset(buyerDefaults(profile, wallet), { keepDirtyValues: true })
   }, [form, profile, wallet])
 
-  const onSubmit = form.handleSubmit(() => undefined)
+  const onSubmit = form.handleSubmit((values) =>
+    checkout.confirm({ ...values, note: values.note?.trim() ? values.note.trim() : null }),
+  )
   const sameNetworkWallets = wallet ? walletsOn(wallets, wallet.network) : []
 
   return (

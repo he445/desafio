@@ -33,6 +33,7 @@ export function ConfirmBlock({
         variant={desktop ? 'default' : 'ctaMobile'}
         size={desktop ? 'default' : 'ctaMobile'}
         aria-disabled={!checkout.canConfirm || undefined}
+        aria-busy={checkout.submitting || undefined}
         aria-describedby={reason ? reasonId : undefined}
         onClick={(event) => {
           if (!checkout.canConfirm) {
@@ -43,9 +44,18 @@ export function ConfirmBlock({
         }}
         className={cn('w-full text-[15px]', desktop && 'h-[45px] rounded-card')}
       >
-        {copy.checkout.confirmPurchase}
+        {checkout.submitting ? copy.checkout.processing : copy.checkout.confirmPurchase}
       </Button>
-      {reason && (
+      {checkout.orderPhase === 'verifying' && (
+        <p className="mt-3 text-sm text-highlight">{copy.checkout.verifying}</p>
+      )}
+      {checkout.orderError && !checkout.submitting && (
+        <div role="alert" className="mt-3 rounded-card border border-coral p-3 text-sm">
+          <p className="font-bold text-heading">{copy.checkout.orderFailedTitle}</p>
+          <p className="mt-1 text-body">{checkout.orderError}</p>
+        </div>
+      )}
+      {reason && !checkout.submitting && (
         <div id={reasonId} className="mt-3 space-y-1 text-sm text-body">
           <p>{reason}</p>
           {checkout.cartBlockers.length > 0 && (

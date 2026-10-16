@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { useRouter } from '@tanstack/react-router'
 import type { Socket } from 'socket.io-client'
 import { copy } from '@/content/copy'
 import { qk } from '@/lib/query-keys'
@@ -22,6 +23,7 @@ function reconcileAfterReconnect(queryClient: QueryClient, userId: string | null
 
 export function RealtimeConnection() {
   const queryClient = useQueryClient()
+  const router = useRouter()
   const { data: session, isPending } = useSessionQuery()
   const userId = isPending ? undefined : (session?.user.id ?? null)
   const status = useRealtimeStatus()
@@ -48,10 +50,19 @@ export function RealtimeConnection() {
     const onConnectError = () => onDrop()
     const onEvent = (payload: unknown) => {
       const applied = applyRealtimeEvent(queryClient, payload, userId)
-      if (!applied || applied.announcements.length === 0) return
-      const { kind, id } = applied.event.resource
-      if (markSideEffectOnce(kind, id, applied.event.version))
-        applied.announcements.forEach(announce)
+      if (!applied) return
+      const { event, announcements } = applied
+      const { kind, id } = event.resource
+      // A confirmation that beats the POST /orders response (a slow or resent request) still
+      // takes the buyer from the payment screen to the receipt.
+      const leavesCheckout =
+        event.type === 'order.updated' &&
+        event.data.status === 'confirmed' &&
+        router.state.location.pathname === '/checkout'
+      if (announcements.length === 0 && !leavesCheckout) return
+      if (!markSideEffectOnce(kind, id, event.version)) return
+      announcements.forEach(announce)
+      if (leavesCheckout) void router.navigate({ to: '/orders/$orderId', params: { orderId: id } })
     }
 
     // A login or a logout reconnects with the new token, which the auth callback rereads.
@@ -76,7 +87,7 @@ export function RealtimeConnection() {
       socket?.disconnect()
       setRealtimeStatus('idle')
     }
-  }, [queryClient, userId])
+  }, [queryClient, router, userId])
 
   useEffect(() => {
     if (status !== 'disconnected') return

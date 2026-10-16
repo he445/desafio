@@ -27,23 +27,40 @@ export function useReviewedQuote(userId: string, network: NetworkId, cart: Cart)
     placeholderData: (previous) => (previous?.network === network ? previous : undefined),
   })
   const [reviewed, setReviewed] = useState<Quote | null>(null)
+  // The quote POST /orders refused, and the fresh one it sent back with QUOTE_OUTDATED.
+  const [refused, setRefused] = useState<{ id: string; offered: Quote | undefined } | null>(null)
   const latest = query.data
   const current = reviewed?.network === network ? reviewed : null
+  const refusedByServer = current !== null && current.id === refused?.id
   const behind = current !== null && isQuoteBehind(current)
-  const fresh = latest && latest !== current && !isQuoteBehind(latest) ? latest : undefined
+  const fresh =
+    latest && latest !== current && latest.id !== refused?.id && !isQuoteBehind(latest)
+      ? latest
+      : undefined
 
-  if (fresh && (!current || !behind || sameQuoteValues(current, fresh))) {
+  if (fresh && !refusedByServer && (!current || !behind || sameQuoteValues(current, fresh))) {
     setReviewed(fresh)
   }
 
-  const pending = behind && fresh && !sameQuoteValues(current, fresh) ? fresh : undefined
+  const outdated = behind || refusedByServer
+  const candidate = fresh ?? (refusedByServer ? refused?.offered : undefined)
+  const pending =
+    outdated && candidate && (refusedByServer || !current || !sameQuoteValues(current, candidate))
+      ? candidate
+      : undefined
+
   return {
     quote: current ?? undefined,
     // The newer quote waiting for the buyer, shown side by side with the reviewed one.
     nextQuote: pending,
-    outdated: behind,
+    outdated,
     acceptNextQuote: () => {
-      if (pending) setReviewed(pending)
+      if (!pending) return
+      setReviewed(pending)
+      setRefused(null)
+    },
+    refuseQuote: (offered: Quote | undefined) => {
+      if (current) setRefused({ id: current.id, offered })
     },
     error: current ? null : query.error,
     refetch: () => void query.refetch(),

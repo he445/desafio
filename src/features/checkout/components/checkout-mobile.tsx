@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { Link } from '@tanstack/react-router'
-import type { Cart, Wallet } from '@/contracts'
+import type { Cart, Profile, Wallet } from '@/contracts'
 import { copy } from '@/content/copy'
 import { EllipsisVerticalIcon } from '@/components/icons'
 import {
@@ -12,6 +12,7 @@ import {
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { displayEth, shortenAddress } from '@/lib/format'
 import type { CheckoutState } from '../hooks/use-checkout'
+import { buyerDefaults } from '../review'
 import { QuoteReview } from './checkout-summary'
 import { ConfirmBlock } from './confirm-block'
 import { WalletOptions } from './wallet-options'
@@ -19,6 +20,7 @@ import { WalletOptions } from './wallet-options'
 interface CheckoutMobileProps {
   checkout: CheckoutState
   cart: Cart
+  profile: Profile
   wallets: Wallet[]
 }
 
@@ -26,7 +28,7 @@ function networkLabel(wallet: Wallet): string {
   return copy.home.networks.find((network) => network.id === wallet.network)?.walletLabel ?? ''
 }
 
-export function CheckoutMobile({ checkout, cart, wallets }: CheckoutMobileProps) {
+export function CheckoutMobile({ checkout, cart, profile, wallets }: CheckoutMobileProps) {
   const walletsTitleId = useId()
   const optionsTitleId = useId()
   const { quote } = checkout
@@ -128,6 +130,9 @@ export function CheckoutMobile({ checkout, cart, wallets }: CheckoutMobileProps)
       <ConfirmBlock
         checkout={checkout}
         variant="mobile"
+        onConfirm={() =>
+          checkout.confirm({ ...buyerDefaults(profile, checkout.wallet), note: null })
+        }
         className="mt-auto pt-8 pb-[max(32px,env(safe-area-inset-bottom))]"
       />
     </div>

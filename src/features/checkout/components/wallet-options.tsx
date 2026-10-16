@@ -8,6 +8,7 @@ const STATUS_TEXT: Record<Exclude<ConnectionStatus, 'idle'>, string> = {
   connecting: copy.checkout.connecting,
   connected: copy.checkout.connected,
   rejected: copy.checkout.rejectedRetry,
+  disconnected: copy.checkout.disconnectedReconnect,
 }
 
 interface WalletOptionsProps {
@@ -73,7 +74,9 @@ export function WalletOptions({ checkout, variant, titleId }: WalletOptionsProps
                 <span
                   className={cn(
                     'ml-auto text-sm whitespace-nowrap',
-                    status === 'rejected' ? 'text-coral' : 'text-highlight',
+                    status === 'rejected' || status === 'disconnected'
+                      ? 'text-coral'
+                      : 'text-highlight',
                   )}
                 >
                   {statusText}

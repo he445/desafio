@@ -1,10 +1,11 @@
-import { Link } from '@tanstack/react-router'
+import { Link, Navigate } from '@tanstack/react-router'
 import type { Cart, Profile, Wallet } from '@/contracts'
 import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
 import { useSessionQuery } from '@/features/auth/queries'
 import { useProfileQuery, useWalletsQuery } from '@/features/account/queries'
 import { useCartQuery } from '@/features/cart/queries'
+import { useResumedOrderId } from '@/features/orders/queries'
 import { isApiError } from '@/lib/api-error'
 import { useCheckout } from '../hooks/use-checkout'
 import { CheckoutDesktop } from './checkout-desktop'
@@ -24,12 +25,17 @@ function CheckoutLoader({ userId, variant }: { userId: string; variant: Variant 
   const cartQuery = useCartQuery()
   const profileQuery = useProfileQuery(userId)
   const walletsQuery = useWalletsQuery(userId)
+  const resumed = useResumedOrderId(userId)
   const queries = [cartQuery, profileQuery, walletsQuery]
+
+  if (resumed.orderId) {
+    return <Navigate to="/orders/$orderId" params={{ orderId: resumed.orderId }} replace />
+  }
 
   const cart = cartQuery.data
   const profile = profileQuery.data
   const wallets = walletsQuery.data
-  if (cart && profile && wallets) {
+  if (cart && profile && wallets && !resumed.checking) {
     if (cart.items.length === 0) return <EmptyCheckout />
     return (
       <CheckoutReady
@@ -105,7 +111,7 @@ function CheckoutReady({ userId, variant, cart, profile, wallets }: CheckoutRead
       {variant === 'desktop' ? (
         <CheckoutDesktop checkout={checkout} cart={cart} profile={profile} wallets={wallets} />
       ) : (
-        <CheckoutMobile checkout={checkout} cart={cart} wallets={wallets} />
+        <CheckoutMobile checkout={checkout} cart={cart} profile={profile} wallets={wallets} />
       )}
     </div>
   )
