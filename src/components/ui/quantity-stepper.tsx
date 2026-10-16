@@ -15,6 +15,18 @@ const VARIANTS = {
     glyph: 'size-3.5',
     value: 'px-2 text-lg font-medium',
   },
+  cart: {
+    target: 'h-[30px] w-6',
+    face: 'size-4 rounded-full bg-primary text-ink',
+    glyph: 'size-2.5',
+    value: 'px-2 text-[17px]/6',
+  },
+  cartMobile: {
+    target: 'size-[30px]',
+    face: 'size-6 rounded-full bg-surface-raised text-foreground',
+    glyph: 'size-3',
+    value: 'px-1.5 text-base',
+  },
 } as const
 
 interface QuantityStepperProps {
@@ -24,6 +36,7 @@ interface QuantityStepperProps {
   onChange: (next: number) => void
   variant?: keyof typeof VARIANTS
   disabled?: boolean
+  label?: string
   className?: string
 }
 
@@ -34,6 +47,7 @@ export function QuantityStepper({
   onChange,
   variant = 'detail',
   disabled = false,
+  label = copy.detail.quantity,
   className,
 }: QuantityStepperProps) {
   const styles = VARIANTS[variant]
@@ -62,11 +76,7 @@ export function QuantityStepper({
   )
 
   return (
-    <div
-      role="group"
-      aria-label={copy.detail.quantity}
-      className={cn('flex items-center', className)}
-    >
+    <div role="group" aria-label={label} className={cn('flex items-center', className)}>
       {button(copy.detail.decrease, value - 1, value <= min, 'minus')}
       <span aria-live="polite" className={cn('min-w-[2ch] text-center tabular-nums', styles.value)}>
         {value}
