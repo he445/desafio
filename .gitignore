@@ -10,3 +10,4 @@ blob-report
 playwright/.cache
 coverage
 .vercel
+.tanstack
