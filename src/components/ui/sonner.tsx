@@ -1,10 +1,13 @@
 import { Toaster as Sonner, type ToasterProps } from 'sonner'
+import { useIsDesktop } from '@/lib/use-media-query'
 
 export function Toaster(props: ToasterProps) {
+  const isDesktop = useIsDesktop()
+
   return (
     <Sonner
       theme="dark"
-      position="top-right"
+      position={isDesktop ? 'top-right' : 'top-center'}
       toastOptions={{
         classNames: {
           toast:

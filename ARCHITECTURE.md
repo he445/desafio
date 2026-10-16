@@ -221,6 +221,7 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 - Abaixo de `1024px` (`lg`), a interface adota a composição mobile; a partir de `1024px`, a composição desktop de 1200 px.
 - Onde as duas composições têm estrutura diferente (header ou barra superior, barra lateral de conta ou pílulas, breadcrumb), a página renderiza só uma delas com `useIsDesktop()`, em vez de esconder a outra por CSS. Assim cada página tem um único `h1`: no mobile ele é o título da barra superior; no desktop, onde o Figma não mostra título em conta e pagamento, ele fica visualmente oculto (`sr-only`) e o conteúdo começa nos `h2` do Figma.
 - O `<Link>` do TanStack Router marca `aria-current="page"` em todo link cujo caminho bate, o que em `/` marcava o logo, Mercado, Aprenda e o EXPLORAR do hero, todos apontando para `/` ou `/#âncora`. Esses links usam `NavLink` (`src/components/ui/nav-link.tsx`), que recebe `current` de quem chama; no header, só Início recebe `aria-current`, e só quando a rota é `/`.
+- Os toasts ficam no canto superior direito no desktop e centralizados no topo no mobile (`src/components/ui/sonner.tsx`), sobre o conteúdo.
 - Páginas com a tab bar fixa de 126 px e sem rodapé (lista de interesse, perfil, carteiras e pedido) ganham `pb-[150px]` no `main`, para o fim do conteúdo não ficar atrás da barra.
 
 ## 12. Desvios do Figma e ajustes de acessibilidade
