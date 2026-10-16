@@ -1,9 +1,12 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { z } from 'zod'
 import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
 import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { nftQueryOptions } from '@/features/nfts/queries'
+import { isApiError } from '@/lib/api-error'
 import { useIsDesktop } from '@/lib/use-media-query'
 
 const NftDetailSearchSchema = z.object({
@@ -12,12 +15,13 @@ const NftDetailSearchSchema = z.object({
 
 function NftDetailPage() {
   const { nftId } = Route.useParams()
+  const { data: nft } = useSuspenseQuery(nftQueryOptions(nftId))
   const isDesktop = useIsDesktop()
 
   return (
     <section className="space-y-6">
       {isDesktop && <Breadcrumb />}
-      <h1 className="text-[28px] font-bold text-heading">{nftId}</h1>
+      <h1 className="text-[28px] font-bold text-heading">{nft.title}</h1>
     </section>
   )
 }
@@ -37,8 +41,16 @@ function NftNotFoundPage() {
 
 export const Route = createFileRoute('/nft/$nftId')({
   validateSearch: NftDetailSearchSchema,
-  head: ({ params }) => ({
-    meta: [{ title: copy.meta.pageTitle(params.nftId) }],
+  loader: async ({ context, params }) => {
+    try {
+      return await context.queryClient.ensureQueryData(nftQueryOptions(params.nftId))
+    } catch (error) {
+      if (isApiError(error) && error.status === 404) throw notFound()
+      throw error
+    }
+  },
+  head: ({ loaderData }) => ({
+    meta: [{ title: copy.meta.pageTitle(loaderData?.title ?? copy.states.nftNotFoundTitle) }],
   }),
   component: NftDetailPage,
   notFoundComponent: NftNotFoundPage,
