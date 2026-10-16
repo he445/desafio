@@ -23,11 +23,10 @@ async function copyFont() {
   await fs.copyFile(fontSrc, path.join(fontDestDir, 'roboto-mono-latin-wght-normal.woff2'))
 }
 
+// Four square views per art: the whole art, the face (top-center 60%), a detail (bottom-center
+// 50%) and the whole art framed on the card color with an 8% margin.
 async function createViewBuffers(inputPath) {
-  const baseImage = sharp(inputPath)
-  const meta = await baseImage.metadata()
-  const w = meta.width ?? 1024
-  const h = meta.height ?? 1024
+  const { width: w = 0, height: h = 0 } = await sharp(inputPath).metadata()
   const side = Math.min(w, h)
   const largest = Math.max(...SIZES)
   if (side < largest) {
@@ -36,10 +35,8 @@ async function createViewBuffers(inputPath) {
     )
   }
 
-  // View 1: full square
   const view1 = await sharp(inputPath).resize(side, side, { fit: 'cover' }).png().toBuffer()
 
-  // View 2: face (top-center 60% square crop)
   const faceSide = Math.round(side * 0.6)
   const faceLeft = Math.round((w - faceSide) / 2)
   const faceTop = Math.round(h * 0.06)
@@ -53,7 +50,6 @@ async function createViewBuffers(inputPath) {
     .png()
     .toBuffer()
 
-  // View 3: detail (bottom-center 50% square crop)
   const detailSide = Math.round(side * 0.5)
   const detailLeft = Math.round((w - detailSide) / 2)
   const detailTop = h - detailSide
@@ -67,7 +63,6 @@ async function createViewBuffers(inputPath) {
     .png()
     .toBuffer()
 
-  // View 4: framed on #241612 with 8% margin
   const margin = Math.round(side * 0.08)
   const innerSide = side - margin * 2
   const innerBuffer = await sharp(view1).resize(innerSide, innerSide).png().toBuffer()
@@ -90,17 +85,13 @@ async function buildNftImages() {
   const outDir = path.join(rootDir, 'public', 'images', 'nfts')
   await fs.mkdir(outDir, { recursive: true })
 
-  const manifest = {}
-
   for (const art of ARTS) {
     const srcPath = path.join(rootDir, 'assets', 'figma', `${art}.png`)
     const views = await createViewBuffers(srcPath)
-    manifest[art] = []
 
     for (let i = 0; i < views.length; i++) {
       const viewIndex = i + 1
       const viewBuffer = views[i]
-      const variants = { webp: {}, avif: {} }
 
       for (const size of SIZES) {
         const webpName = `${art}-${viewIndex}-${size}.webp`
@@ -115,9 +106,6 @@ async function buildNftImages() {
           .resize(size, size)
           .avif({ quality: 68 })
           .toFile(path.join(outDir, avifName))
-
-        variants.webp[size] = `/images/nfts/${webpName}`
-        variants.avif[size] = `/images/nfts/${avifName}`
       }
 
       const defaultWebpName = `${art}-${viewIndex}.webp`
@@ -125,18 +113,8 @@ async function buildNftImages() {
         path.join(outDir, `${art}-${viewIndex}-640.webp`),
         path.join(outDir, defaultWebpName),
       )
-
-      manifest[art].push({
-        view: viewIndex,
-        src: `/images/nfts/${defaultWebpName}`,
-        width: 640,
-        height: 640,
-        variants,
-      })
     }
   }
-
-  await fs.writeFile(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
 }
 
 async function main() {
