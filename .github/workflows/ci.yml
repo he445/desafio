@@ -27,6 +27,9 @@ jobs:
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Check formatting
+        run: npm run format:check
+
       - name: Run CI pipeline (typecheck, lint, unit, build, e2e)
         run: npm run ci
 
