@@ -17,6 +17,14 @@ test.describe('slow network', () => {
     await expect(catalog.cards.first()).toBeVisible()
     await expect(page.locator('[aria-busy="true"]')).toHaveCount(0)
   })
+
+  test('the NFT detail shows its skeleton and then the NFT', async ({ page }) => {
+    await gotoReady(page, '/nft/emerald-ape-042')
+
+    await expect(page.getByText('Carregando NFT…')).toBeAttached()
+    await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible()
+    await expect(page.getByText('Carregando NFT…')).toHaveCount(0)
+  })
 })
 
 test.describe('server error', () => {
@@ -80,4 +88,26 @@ test('the catalog recovers when the connection comes back', async ({ page, mock 
   await expect(page.getByRole('alert')).toHaveCount(0)
   await expect(catalog.cards).toHaveCount(9)
   await expect(page).toHaveURL(/tab=trending/)
+})
+
+test('the NFT detail explains a failure and recovers on demand', async ({ page, mock }) => {
+  const catalog = new CatalogPage(page)
+  await catalog.open()
+
+  await mock.setRules([
+    {
+      match: { method: 'GET', path: '/nfts/emerald-ape-042' },
+      fail: { kind: 'http', status: 500, code: 'INTERNAL' },
+    },
+  ])
+  await catalog.cards
+    .getByRole('link', { name: /Emerald Ape #042/ })
+    .first()
+    .click()
+  const alert = page.getByRole('alert')
+  await expect(alert).toContainText('Algo deu errado')
+
+  await mock.clearRules()
+  await alert.getByRole('button', { name: 'Tentar novamente' }).click()
+  await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible()
 })
