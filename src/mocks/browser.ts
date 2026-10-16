@@ -28,7 +28,21 @@ function applyBootUrlParams(): void {
   window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
 }
 
+// MSW calls registration.update() on an existing worker without handling the promise. A reload
+// in the middle of that update (the reset and scenario links reload the page) rejects it with
+// "Failed to update a ServiceWorker"; the worker already active keeps serving, so only that
+// rejection is dropped.
+function ignoreInterruptedWorkerUpdate(): void {
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason: unknown = event.reason
+    if (reason instanceof Error && reason.message.includes('mockServiceWorker.js')) {
+      event.preventDefault()
+    }
+  })
+}
+
 export async function startMocks(): Promise<void> {
+  ignoreInterruptedWorkerUpdate()
   applyBootUrlParams()
   loadDb()
 
