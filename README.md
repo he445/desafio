@@ -30,28 +30,30 @@ O arquivo `.env` está **intencionalmente versionado** no repositório porque co
 | ---------------------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
 | `VITE_API_MOCKING`           | `enabled`                        | Ativa a interceptação REST (Service Worker) e WebSocket pelo MSW antes do boot da UI |
 | `VITE_API_BASE_URL`          | `/api/v1`                        | Prefixo base da instância Axios                                                      |
-| `VITE_SOCKET_URL`            | `wss://realtime.nft-market.test` | Endpoint WebSocket interceptado pelo MSW (domínio `.test` reservado Pela RFC 2606)   |
+| `VITE_SOCKET_URL`            | `wss://realtime.nft-market.test` | Endpoint WebSocket interceptado pelo MSW (domínio `.test` reservado pela RFC 2606)   |
 | `VITE_MOCK_DEFAULT_SCENARIO` | `default`                        | Cenário inicial carregado pelo banco simulado                                        |
 
 ## Comandos disponíveis
 
-| Script                       | Comando                                                                                       | Descrição                                                                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `npm run dev`                | `vite`                                                                                        | Servidor de desenvolvimento com mocks ativos                                                 |
-| `npm run build`              | `tsc -b && vite build`                                                                        | Verificação de tipos e build de produção com mocks ativos                                    |
-| `npm run preview`            | `vite preview --port 4173 --strictPort`                                                       | Serve o build otimizado na porta 4173                                                        |
-| `npm run typecheck`          | `tsc -b`                                                                                      | Checagem estrita de tipos (`strict: true`, `noUncheckedIndexedAccess: true`)                 |
-| `npm run lint`               | `eslint . --max-warnings=0`                                                                   | Lint de código, hooks, acessibilidade (`jsx-a11y`), Router, Query e fronteiras de camadas    |
-| `npm run format`             | `prettier --write .`                                                                          | Formatação com ordenação de classes Tailwind                                                 |
-| `npm run format:check`       | `prettier --check .`                                                                          | Verificação de formatação sem alterar arquivos                                               |
-| `npm run test:unit`          | `vitest run`                                                                                  | Testes unitários de regras de domínio e utilitários                                          |
-| `npm run test:e2e`           | `playwright test`                                                                             | Testes E2E em Chromium (desktop, mobile e tablet) contra o build servido pelo `vite preview` |
-| `npm run test:e2e:ui`        | `playwright test --ui`                                                                        | Interface interativa do Playwright para depuração local                                      |
-| `npm run test:visual`        | `playwright test --grep @visual`                                                              | Regressão visual das telas principais                                                        |
-| `npm run test:visual:update` | `playwright test --grep @visual --update-snapshots`                                           | Atualização das baselines de regressão visual                                                |
-| `npm run lighthouse`         | `node scripts/lighthouse.mjs`                                                                 | Auditoria Lighthouse (3 execuções por página e perfil)                                       |
-| `npm run assets`             | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF/WebP dos NFTs                                   |
-| `npm run ci`                 | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | Pipeline completo executado no GitHub Actions                                                |
+| Script                       | Comando                                                                                       | Descrição                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                | `vite`                                                                                        | Servidor de desenvolvimento com mocks ativos                                                                                               |
+| `npm run build`              | `tsc -b && vite build`                                                                        | Verificação de tipos e build de produção com mocks ativos                                                                                  |
+| `npm run preview`            | `vite preview --port 4173 --strictPort`                                                       | Serve o build otimizado na porta 4173                                                                                                      |
+| `npm run typecheck`          | `tsc -b`                                                                                      | Checagem estrita de tipos (`strict: true`, `noUncheckedIndexedAccess: true`)                                                               |
+| `npm run lint`               | `eslint . --max-warnings=0`                                                                   | Lint de código, hooks, acessibilidade (`jsx-a11y`), Router, Query e fronteiras de camadas                                                  |
+| `npm run format`             | `prettier --write .`                                                                          | Formatação com ordenação de classes Tailwind                                                                                               |
+| `npm run format:check`       | `prettier --check .`                                                                          | Verificação de formatação sem alterar arquivos                                                                                             |
+| `npm run test:unit`          | `vitest run`                                                                                  | Testes unitários de regras de domínio e utilitários                                                                                        |
+| `npm run test:e2e`           | `playwright test`                                                                             | Testes E2E em Chromium (desktop e mobile; o projeto tablet roda só os testes com `@responsive`) contra o build servido pelo `vite preview` |
+| `npm run test:e2e:ui`        | `playwright test --ui`                                                                        | Interface interativa do Playwright para depuração local                                                                                    |
+| `npm run test:visual`        | `playwright test --grep @visual`                                                              | Regressão visual das telas principais                                                                                                      |
+| `npm run test:visual:update` | `playwright test --grep @visual --update-snapshots`                                           | Atualização das baselines de regressão visual                                                                                              |
+| `npm run lighthouse`         | `node scripts/lighthouse.mjs`                                                                 | Auditoria Lighthouse (3 execuções por página e perfil)                                                                                     |
+| `npm run assets`             | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF/WebP dos NFTs                                                                                 |
+| `npm run ci`                 | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | Pipeline completo executado no GitHub Actions                                                                                              |
+
+`test:visual`, `test:visual:update` e `lighthouse` já estão declarados, mas ainda não têm o que executar: não existe teste com a tag `@visual` (o Playwright encerra com "No tests found") e `scripts/lighthouse.mjs` ainda não foi criado.
 
 ## Arquitetura e decisões técnicas
 
