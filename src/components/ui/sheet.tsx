@@ -14,7 +14,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     ref={ref}
-    className={cn('bg-ink/80 fixed inset-0 z-50', className)}
+    className={cn('fixed inset-0 z-50 bg-ink/80', className)}
     {...props}
   />
 ))
@@ -31,7 +31,7 @@ const SheetContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        'bg-surface text-foreground shadow-sheet fixed z-50 focus:outline-none',
+        'fixed z-50 bg-surface text-foreground shadow-sheet focus:outline-none',
         side === 'bottom' &&
           'inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-[40px] p-6',
         side === 'right' && 'inset-y-0 right-0 h-full w-80 max-w-full overflow-y-auto p-6',
@@ -43,7 +43,7 @@ const SheetContent = React.forwardRef<
       {children}
       <SheetPrimitive.Close
         aria-label="Fechar"
-        className="bg-surface-raised text-highlight absolute top-6 right-6 inline-flex h-8 w-8 items-center justify-center rounded-full"
+        className="absolute top-6 right-6 inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-raised text-highlight"
       >
         <X className="h-[18px] w-[18px]" />
       </SheetPrimitive.Close>
@@ -58,7 +58,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn('text-foreground text-xl font-bold', className)}
+    className={cn('text-xl font-bold text-foreground', className)}
     {...props}
   />
 ))
@@ -68,7 +68,7 @@ const SheetDescription = React.forwardRef<
   React.ComponentRef<typeof SheetPrimitive.Description>,
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Description>
 >(({ className, ...props }, ref) => (
-  <SheetPrimitive.Description ref={ref} className={cn('text-body text-sm', className)} {...props} />
+  <SheetPrimitive.Description ref={ref} className={cn('text-sm text-body', className)} {...props} />
 ))
 SheetDescription.displayName = SheetPrimitive.Description.displayName
 

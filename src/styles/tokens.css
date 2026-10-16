@@ -135,7 +135,7 @@
     background-color: var(--kurio-ink);
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
   }
   :focus-visible {
     outline: 2px solid var(--kurio-primary);

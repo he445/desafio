@@ -15,26 +15,26 @@ function RootLayout() {
       <HeadContent />
       <a
         href="#main-content"
-        className="focus:rounded-btn focus:bg-primary focus:text-ink sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:font-bold"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded-btn focus:bg-primary focus:px-4 focus:py-2 focus:font-bold focus:text-ink"
       >
         {copy.nav.skipToContent}
       </a>
-      <div className="bg-ink text-foreground min-h-dvh">
-        <header className="border-line border-b">
+      <div className="min-h-dvh bg-ink text-foreground">
+        <header className="border-b border-line">
           <div className="mx-auto flex h-[45px] w-full max-w-[1200px] items-center justify-between px-6 lg:px-0">
-            <Link to="/" className="text-foreground text-sm font-bold tracking-[0.1em]">
+            <Link to="/" className="text-sm font-bold tracking-[0.1em] text-foreground">
               {copy.brand.logo}
             </Link>
             <nav aria-label="Principal" className="flex items-center gap-6">
               <Link
                 to="/"
-                className="text-foreground [&.active]:text-highlight text-base/4 [&.active]:font-bold"
+                className="text-base/4 text-foreground [&.active]:font-bold [&.active]:text-highlight"
               >
                 {copy.nav.home}
               </Link>
               <Link
                 to="/cart"
-                className="text-foreground [&.active]:text-highlight text-base/4 [&.active]:font-bold"
+                className="text-base/4 text-foreground [&.active]:font-bold [&.active]:text-highlight"
               >
                 Carrinho
               </Link>
@@ -53,7 +53,7 @@ function RootLayout() {
 function NotFoundPage() {
   return (
     <section className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
-      <h1 className="text-heading text-[28px] font-bold">{copy.states.notFoundTitle}</h1>
+      <h1 className="text-[28px] font-bold text-heading">{copy.states.notFoundTitle}</h1>
       <Button asChild>
         <Link to="/">{copy.states.backToHome}</Link>
       </Button>

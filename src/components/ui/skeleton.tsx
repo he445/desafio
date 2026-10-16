@@ -6,7 +6,7 @@ export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>
     <div
       aria-hidden="true"
       className={cn(
-        'bg-surface animate-shimmer motion-reduce:bg-surface motion-reduce:animate-none',
+        'animate-shimmer bg-surface motion-reduce:animate-none motion-reduce:bg-surface',
         className,
       )}
       {...props}
