@@ -4,6 +4,7 @@ import {
   displayEth,
   displayQuantity,
   displayTokenId,
+  formatCalendarDate,
   formatFacetCount,
   formatReceiptDate,
   shortenAddress,
@@ -34,5 +35,9 @@ describe('format helpers', () => {
     // vitest.config.ts runs the suite in America/Sao_Paulo (UTC-3).
     expect(formatReceiptDate('2026-07-30T01:30:00.000Z')).toBe('29 Jul, 2026')
     expect(formatReceiptDate('2026-12-31T23:30:00.000-03:00')).toBe('31 Dez, 2026')
+  })
+
+  it('prints a calendar date as written, whatever the time zone', () => {
+    expect(formatCalendarDate('2026-09-01')).toBe('01 Set, 2026')
   })
 })

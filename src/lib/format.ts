@@ -62,6 +62,12 @@ export function formatReceiptDate(isoDate: string): string {
   return `${day} ${month}, ${date.getFullYear()}`
 }
 
+// A calendar date (2026-09-14) has no time zone, so it is printed as written.
+export function formatCalendarDate(isoDate: string): string {
+  const [year = '', month = '', day = ''] = isoDate.split('-')
+  return `${day} ${MONTHS_PT[Number(month) - 1] ?? ''}, ${year}`
+}
+
 export function formatFacetCount(count: number): string {
   return `(${count})`
 }

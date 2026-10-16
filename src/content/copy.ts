@@ -234,6 +234,49 @@ export const copy = {
     contractLabel: 'Contrato:',
     royaltiesLabel: 'Direitos autorais:',
     moreFromCollection: 'Mais desta coleção',
+    loading: 'Carregando NFT…',
+    gallery: 'Galeria de imagens',
+    imageOf: (position: number, total: number) => `Imagem ${position} de ${total}`,
+    zoom: 'Ampliar imagem',
+    stock: (supply: number | null, available: number) =>
+      supply === null
+        ? `Tiragem aberta · ${available} disponíveis`
+        : `Tiragem ${supply} · ${available} disponíveis`,
+    allSoldOut: 'Todas as edições estão esgotadas.',
+    decrease: 'Diminuir quantidade',
+    increase: 'Aumentar quantidade',
+    quantity: 'Quantidade',
+    limitReached: (limit: number, inCart: number) =>
+      inCart > 0
+        ? `Limite desta edição: mais ${limit} além das ${inCart} no seu carrinho.`
+        : `Limite desta edição: ${limit} por pedido.`,
+    cartFull: (inCart: number) =>
+      `Você já tem ${inCart} desta edição no carrinho, o máximo disponível para um pedido.`,
+    addToCart: 'Adicionar ao carrinho',
+    addedToCart: 'Adicionado ao carrinho',
+    viewCart: 'Ver carrinho',
+    addToCartFailed: 'Não foi possível adicionar ao carrinho.',
+    ratingOf: (average: number) => `Nota ${average.toFixed(1)} de 5`,
+    network: (label: string) =>
+      `Cunhado na ${label} com procedência imutável e metadados armazenados no IPFS.`,
+    contract: (address: string, standard: string) =>
+      `${address} • Contrato inteligente ${standard} verificado.`,
+    royalties: (percent: string) =>
+      `Direitos autorais do criador: ${percent}% nas vendas secundárias, pagos automaticamente pelos mercados compatíveis.`,
+    shareLinkedIn: 'Compartilhar no LinkedIn',
+    shareEmail: 'Compartilhar por e-mail',
+    shareX: 'Compartilhar no X',
+    newTab: '(abre em nova aba)',
+    relatedPrevious: 'NFTs anteriores',
+    relatedNext: 'Próximos NFTs',
+  },
+  favorites: {
+    add: (title: string) => `Favoritar ${title}`,
+    failed: 'Não foi possível atualizar seus favoritos.',
+    empty: 'Você ainda não favoritou nenhum NFT.',
+    explore: 'Explorar NFTs',
+    loading: 'Carregando favoritos…',
+    errorTitle: 'Não foi possível carregar seus favoritos',
   },
   cart: {
     titleMobile: 'Carrinho de NFTs',
