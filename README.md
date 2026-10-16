@@ -14,11 +14,13 @@ npm ci
 npx playwright install chromium
 ```
 
-Para regerar os assets otimizados (fontes e variantes AVIF/WebP a partir dos PNGs exportados do Figma em `assets/figma/`):
+Para regerar os assets otimizados (fonte e variantes AVIF/WebP a partir dos PNGs exportados do Figma em `assets/figma/`):
 
 ```bash
 npm run assets
 ```
+
+Os PNGs de `assets/figma/` são exportações 4x dos nós do Figma (1000×1000). O script recusa arquivo com menos de 960 px de lado, para nenhuma variante sair ampliada.
 
 ## Variáveis de ambiente
 

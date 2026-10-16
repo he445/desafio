@@ -29,6 +29,12 @@ async function createViewBuffers(inputPath) {
   const w = meta.width ?? 1024
   const h = meta.height ?? 1024
   const side = Math.min(w, h)
+  const largest = Math.max(...SIZES)
+  if (side < largest) {
+    throw new Error(
+      `${path.relative(rootDir, inputPath)} is ${w}x${h}px; export it from Figma as PNG 4x (at least ${largest}px) so no variant is upscaled.`,
+    )
+  }
 
   // View 1: full square
   const view1 = await sharp(inputPath).resize(side, side, { fit: 'cover' }).png().toBuffer()
@@ -130,7 +136,7 @@ async function buildNftImages() {
     }
   }
 
-  await fs.writeFile(path.join(outDir, 'manifest.json'), JSON.stringify(manifest, null, 2))
+  await fs.writeFile(path.join(outDir, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
 }
 
 async function main() {

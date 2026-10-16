@@ -90,7 +90,7 @@ A ser detalhada na Fase 8 (`Idempotency-Key` persistida por tentativa de checkou
 
 ## 13. Assets e imagens
 
-As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`) foram exportadas dos nós originais do Figma e organizadas em `assets/figma/`. O script `scripts/build-assets.mjs` processa cada arte com `sharp` para gerar quatro vistas quadradas (inteira, rosto, detalhe e moldura sobre `#241612`) nos formatos AVIF e WebP em 320, 640 e 960 px dentro de `public/images/nfts/`.
+As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`) foram exportadas do Figma em PNG 4x (1000×1000), a partir dos nós `4:137`, `4:162`, `4:164` e `4:286`, e organizadas em `assets/figma/`. O script `scripts/build-assets.mjs` processa cada arte com `sharp` para gerar quatro vistas quadradas (inteira, rosto, detalhe e moldura sobre `#241612`) nos formatos AVIF e WebP em 320, 640 e 960 px dentro de `public/images/nfts/`, com as dimensões em `manifest.json`. O script recusa PNG com menos de 960 px de lado, para nenhuma variante sair ampliada.
 
 ## 14. Limitações conhecidas
 
