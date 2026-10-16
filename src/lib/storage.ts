@@ -44,7 +44,6 @@ export function getGuestCartId(): string | null {
 }
 
 export function getOrCreateGuestCartId(): string {
-  if (typeof window === 'undefined') return 'guest-ssr'
   const existing = window.localStorage.getItem(GUEST_CART_ID_KEY)
   if (existing) return existing
   const created = `guest-${crypto.randomUUID()}`
