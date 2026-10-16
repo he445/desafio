@@ -470,6 +470,11 @@ export const copy = {
     expireSession: 'Expirar a sessão',
     reset: 'Restaurar o banco',
   },
+  realtime: {
+    reconnecting: 'Reconectando…',
+    priceChanged: (item: string, price: string) => `O preço de ${item} mudou para ${price} ETH`,
+    soldOut: (item: string) => `${item} esgotou`,
+  },
   states: {
     emptyCatalogTitle: 'Nenhum NFT encontrado',
     emptyCatalogSubtitle: 'Ajuste os filtros ou limpe a busca.',
