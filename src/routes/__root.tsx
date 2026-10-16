@@ -21,7 +21,7 @@ function RootLayout() {
       </a>
       <div className="min-h-dvh bg-ink text-foreground">
         <header className="border-b border-line">
-          <div className="mx-auto flex h-[45px] w-full max-w-[1200px] items-center justify-between px-6 lg:px-0">
+          <div className="mx-auto flex h-[45px] w-full max-w-[720px] items-center justify-between px-6 lg:max-w-[1248px]">
             <Link to="/" className="text-sm font-bold tracking-[0.1em] text-foreground">
               {copy.brand.logo}
             </Link>
@@ -41,7 +41,10 @@ function RootLayout() {
             </nav>
           </div>
         </header>
-        <main id="main-content" className="mx-auto w-full max-w-[1200px] px-6 py-8 lg:px-0">
+        <main
+          id="main-content"
+          className="mx-auto w-full max-w-[720px] px-6 py-8 lg:max-w-[1248px]"
+        >
           <Outlet />
         </main>
       </div>
