@@ -36,6 +36,7 @@ export const copy = {
     carousel: 'carrossel',
     slide: 'slide',
     carouselPage: (page: number, total: number) => `Página ${page} de ${total}`,
+    slideOf: (position: number, total: number) => `${position} de ${total}`,
   },
   footer: {
     medallions: [

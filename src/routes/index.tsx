@@ -3,7 +3,7 @@ import { CatalogSearchSchema, DEFAULT_CATALOG_SEARCH } from '@/contracts'
 import { copy } from '@/content/copy'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
 import { HomeDesktop } from '@/features/catalog/components/home-desktop'
-import { nftListQueryOptions } from '@/features/catalog/queries'
+import { featuredQueryOptions, nftListQueryOptions } from '@/features/catalog/queries'
 
 function HomePage() {
   return <HomeDesktop />
@@ -18,6 +18,7 @@ export const Route = createFileRoute('/')({
   loader: ({ context, deps }) => {
     // Not awaited: the page renders its skeletons at once and fills in as the data arrives.
     void context.queryClient.prefetchQuery(nftListQueryOptions(deps.search))
+    void context.queryClient.prefetchQuery(featuredQueryOptions())
   },
   head: () => ({
     meta: [
