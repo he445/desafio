@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useLocation, useNavigate } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
 import { BuyIcon, LoginIcon, SearchIcon, UserIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -55,8 +55,15 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
   const navigate = useNavigate()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const urlTerm = useSearch({ strict: false, select: (search) => search.q })
 
   const { divider, active } = resolveHeaderConfig(location.pathname)
+
+  // The field always opens with what the URL searches for, not with the last thing typed.
+  const handleSearchOpenChange = (open: boolean) => {
+    if (open) setSearchTerm(urlTerm === undefined ? '' : String(urlTerm))
+    setSearchOpen(open)
+  }
 
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -134,7 +141,7 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
         </nav>
 
         <div className="flex items-center gap-7">
-          <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+          <Popover open={searchOpen} onOpenChange={handleSearchOpenChange}>
             <PopoverTrigger asChild>
               <button
                 type="button"
