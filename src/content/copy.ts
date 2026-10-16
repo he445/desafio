@@ -33,6 +33,7 @@ export const copy = {
     breadcrumb: 'Trilha de navegação',
     back: 'Voltar',
     close: 'Fechar',
+    carousel: 'carrossel',
   },
   footer: {
     medallions: [

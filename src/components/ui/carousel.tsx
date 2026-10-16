@@ -1,5 +1,7 @@
 import * as React from 'react'
 import useEmblaCarousel, { type UseEmblaCarouselType } from 'embla-carousel-react'
+import { copy } from '@/content/copy'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
 export type CarouselApi = UseEmblaCarouselType[1]
@@ -21,23 +23,26 @@ export function Carousel({ opts, setApi, className, children, ...props }: Carous
     }
   }, [api, setApi])
 
+  // With reduced motion the keyboard jumps straight to the slide instead of animating.
+  const reduceMotion = useMediaQuery('(prefers-reduced-motion: reduce)')
+
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (event.key === 'ArrowLeft') {
         event.preventDefault()
-        api?.scrollPrev()
+        api?.scrollPrev(reduceMotion)
       } else if (event.key === 'ArrowRight') {
         event.preventDefault()
-        api?.scrollNext()
+        api?.scrollNext(reduceMotion)
       }
     },
-    [api],
+    [api, reduceMotion],
   )
 
   return (
     <div
       role="region"
-      aria-roledescription="carousel"
+      aria-roledescription={copy.a11y.carousel}
       onKeyDownCapture={handleKeyDown}
       className={cn('relative', className)}
       {...props}
