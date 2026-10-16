@@ -1,60 +1,55 @@
 # Kurio — Marketplace de NFTs
 
-Implementação do marketplace de NFTs **Kurio** em React 19 e TypeScript 6, com roteamento tipado via TanStack Router, gerenciamento de estado assíncrono via TanStack Query, cliente HTTP Axios, atualizações em tempo real via Socket.IO e backend simulado no navegador com MSW 2.
+Marketplace de NFTs da Kurio em React 19 e TypeScript 6, com TanStack Router, TanStack Query e Axios. Não há backend: o MSW 2 simula a API REST no Service Worker e um servidor Socket.IO no WebSocket da própria aba, com banco em `localStorage`, regras de estoque, cotação e pedido, e cenários de falha que se trocam pela URL ou por um painel.
 
-- **Demonstração publicada (Vercel):** [https://desafio-rosy-kappa.vercel.app](https://desafio-rosy-kappa.vercel.app)
-- **Repositório:** [https://github.com/he445/desafio](https://github.com/he445/desafio)
-- **Documentação de arquitetura:** [ARCHITECTURE.md](./ARCHITECTURE.md)
+Até aqui estão prontos o servidor simulado (31 rotas REST, eventos e 16 cenários) e a casca da aplicação: layout desktop e mobile, todas as rotas, sessão no boot, proteção das rotas privadas e as telas de 404. As telas de catálogo, carrinho, pagamento, pedido e conta ainda mostram só o título e a navegação, o detalhe mostra o nome do NFT vindo da API, e o cliente Socket.IO ainda não está ligado.
+
+- Demonstração: [desafio-rosy-kappa.vercel.app](https://desafio-rosy-kappa.vercel.app)
+- Repositório: [github.com/he445/desafio](https://github.com/he445/desafio)
+- Arquitetura e decisões: [ARCHITECTURE.md](./ARCHITECTURE.md)
 
 ## Requisitos
 
-- Node.js `24.x` (fixado em `.nvmrc` e `package.json#engines`)
-- npm `10+`
+- Node.js 24 (`.nvmrc` e `engines` do `package.json`)
+- npm 10 ou mais novo
 
-## Setup a partir de um checkout limpo
+## Setup
 
 ```bash
 npm ci
 npx playwright install chromium
+npm run dev
 ```
 
-Para regerar os assets otimizados (fontes e variantes AVIF/WebP a partir dos PNGs exportados do Figma em `assets/figma/`):
-
-```bash
-npm run assets
-```
+O `npm run assets` regera a fonte de `public/fonts/` e as imagens de `public/images/nfts/` a partir dos PNGs de `assets/figma/`. Os arquivos gerados já estão no repositório; o comando só é necessário se as artes mudarem.
 
 ## Variáveis de ambiente
 
-O arquivo `.env` está **intencionalmente versionado** no repositório porque contém apenas constantes públicas da camada de simulação (nenhum segredo ou chave de API). Isso garante que um checkout limpo (`npm ci && npm run ci`) e o deploy na Vercel funcionem imediatamente com os mocks e o WebSocket simulados ativos, sem exigir cópia manual de arquivos ou configuração de painel. Sobrescritas locais devem usar `.env.local` (ignorado no `.gitignore`).
+O `.env` é versionado porque só tem os padrões públicos da simulação, sem segredo. Assim `npm ci && npm run ci` e o deploy funcionam sem configuração. Para sobrescrever algo localmente, use `.env.local`, que o Git ignora.
 
-| Variável                     | Padrão                           | Função                                                                               |
-| ---------------------------- | -------------------------------- | ------------------------------------------------------------------------------------ |
-| `VITE_API_MOCKING`           | `enabled`                        | Ativa a interceptação REST (Service Worker) e WebSocket pelo MSW antes do boot da UI |
-| `VITE_API_BASE_URL`          | `/api/v1`                        | Prefixo base da instância Axios                                                      |
-| `VITE_SOCKET_URL`            | `wss://realtime.nft-market.test` | Endpoint WebSocket interceptado pelo MSW (domínio `.test` reservado pela RFC 2606)   |
-| `VITE_MOCK_DEFAULT_SCENARIO` | `default`                        | Cenário inicial carregado pelo banco simulado                                        |
+| Variável                     | Padrão                           | Função                                                                                    |
+| ---------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
+| `VITE_API_MOCKING`           | `enabled`                        | Com `enabled`, o `src/main.tsx` sobe o MSW (REST e WebSocket) antes de renderizar o app   |
+| `VITE_API_BASE_URL`          | `/api/v1`                        | Prefixo da instância do Axios e das rotas do mock                                         |
+| `VITE_SOCKET_URL`            | `wss://realtime.nft-market.test` | Endereço do WebSocket que o MSW intercepta; o domínio `.test` é reservado e nunca resolve |
+| `VITE_MOCK_DEFAULT_SCENARIO` | `default`                        | Cenário usado enquanto o navegador não tiver outro guardado                               |
 
-## Credenciais fictícias e cupons de teste
+## Credenciais e cupons de teste
 
-### Usuários pré-cadastrados
+| E-mail                  | Senha        | No seed                                                                                        |
+| ----------------------- | ------------ | ---------------------------------------------------------------------------------------------- |
+| `marina@nftmarket.test` | `Senha@1234` | 3 favoritos, carteira principal na Ethereum, reserva na Polygon e 1 pedido anterior confirmado |
+| `rafael@nftmarket.test` | `Senha@1234` | Sem favoritos, carteiras ou pedidos                                                            |
 
-| E-mail                  | Senha        | Perfil no seed                                                                                                   |
-| ----------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `marina@nftmarket.test` | `Senha@1234` | 3 favoritos, 2 carteiras cadastradas (Principal na Ethereum e Reserva na Polygon) e 1 pedido anterior confirmado |
-| `rafael@nftmarket.test` | `Senha@1234` | Conta limpa (sem favoritos, sem carteiras e sem pedidos)                                                         |
-
-_Observação:_ as senhas nunca são gravadas em claro no banco simulado; o seed utiliza hash PBKDF2-SHA256 (100.000 iterações via Web Crypto) com sal individual por usuário. O nome de usuário `admin` é reservado para exercitar conflitos `409 USERNAME_TAKEN`.
-
-### Cupons promocionais
+O banco simulado guarda as senhas como hash PBKDF2-SHA256 (100.000 iterações, via Web Crypto) com sal por usuário. Os nomes de usuário `admin`, `root`, `support` e `kurio` são reservados e respondem `409 USERNAME_TAKEN` no cadastro.
 
 | Código       | Tipo       | Regra                                                        |
 | ------------ | ---------- | ------------------------------------------------------------ |
 | `BEMVINDO10` | Percentual | 10% de desconto (`1000` bps) sobre o subtotal                |
 | `ETH005`     | Valor fixo | `0.05 ETH` de desconto para subtotais a partir de `0.50 ETH` |
-| `VERAO25`    | Expirado   | Retorna `422 COUPON_EXPIRED`                                 |
+| `VERAO25`    | Expirado   | Responde `422 COUPON_EXPIRED`                                |
 
-Qualquer outro código retorna `422 COUPON_INVALID`.
+Qualquer outro código responde `422 COUPON_INVALID`.
 
 ## Cenários do servidor simulado (MSW)
 
@@ -82,25 +77,22 @@ Qualquer outro código retorna `422 COUPON_INVALID`.
 | `socket-drop`           | 250 ms depois do pedido, o socket cai e recusa conexões por 1,5 s; a confirmação acontece nesse intervalo                                                    | Reconciliação via REST               |
 | `duplicate-events`      | Todo evento sai duas vezes, seguido de uma cópia com versão anterior                                                                                         | Deduplicação e versão                |
 
-## Comandos disponíveis
+## Comandos
 
-| Script                       | Comando                                                                                       | Descrição                                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run dev`                | `vite`                                                                                        | Servidor de desenvolvimento com mocks ativos                                              |
-| `npm run build`              | `tsc -b && vite build`                                                                        | Verificação de tipos e build de produção com mocks ativos                                 |
-| `npm run preview`            | `vite preview --port 4173 --strictPort`                                                       | Serve o build otimizado na porta 4173                                                     |
-| `npm run typecheck`          | `tsc -b`                                                                                      | Checagem estrita de tipos (`strict: true`, `noUncheckedIndexedAccess: true`)              |
-| `npm run lint`               | `eslint . --max-warnings=0`                                                                   | Lint de código, hooks, acessibilidade (`jsx-a11y`), Router, Query e fronteiras de camadas |
-| `npm run format`             | `prettier --write .`                                                                          | Formatação com ordenação de classes Tailwind                                              |
-| `npm run format:check`       | `prettier --check .`                                                                          | Verificação de formatação sem alterar arquivos                                            |
-| `npm run test:unit`          | `vitest run`                                                                                  | Testes unitários (seção Testes)                                                           |
-| `npm run test:e2e`           | `playwright test`                                                                             | Testes E2E em Chromium contra o build servido pelo `vite preview`                         |
-| `npm run test:e2e:ui`        | `playwright test --ui`                                                                        | Interface interativa do Playwright para depuração local                                   |
-| `npm run test:visual`        | `playwright test --grep @visual`                                                              | Regressão visual das telas principais                                                     |
-| `npm run test:visual:update` | `playwright test --grep @visual --update-snapshots`                                           | Atualização das baselines de regressão visual                                             |
-| `npm run lighthouse`         | `node scripts/lighthouse.mjs`                                                                 | Auditoria Lighthouse (3 execuções por página e perfil)                                    |
-| `npm run assets`             | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF/WebP dos NFTs                                |
-| `npm run ci`                 | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | Pipeline completo executado no GitHub Actions                                             |
+| Script                 | Comando                                                                                       | Função                                                                                |
+| ---------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `npm run dev`          | `vite`                                                                                        | Desenvolvimento com os mocks ligados                                                  |
+| `npm run build`        | `tsc -b && vite build`                                                                        | Checagem de tipos e build, com os mocks ligados                                       |
+| `npm run preview`      | `vite preview --port 4173 --strictPort`                                                       | Serve o build na porta 4173 (o Playwright usa este)                                   |
+| `npm run typecheck`    | `tsc -b`                                                                                      | Tipos em modo estrito, com `noUncheckedIndexedAccess`                                 |
+| `npm run lint`         | `eslint . --max-warnings=0`                                                                   | Código, hooks, acessibilidade (`jsx-a11y`), Router, Query e fronteiras entre camadas  |
+| `npm run format`       | `prettier --write .`                                                                          | Formatação, com ordenação das classes do Tailwind                                     |
+| `npm run format:check` | `prettier --check .`                                                                          | Confere a formatação sem alterar arquivos                                             |
+| `npm run test:unit`    | `vitest run`                                                                                  | Testes unitários (seção Testes)                                                       |
+| `npm run test:e2e`     | `playwright test`                                                                             | Testes E2E em Chromium contra o build servido pelo `vite preview`                     |
+| `npm run test:e2e:ui`  | `playwright test --ui`                                                                        | Interface do Playwright para depuração local                                          |
+| `npm run assets`       | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF e WebP dos NFTs                          |
+| `npm run ci`           | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | O mesmo pipeline do GitHub Actions, que antes confere a formatação com `format:check` |
 
 ## Testes
 
@@ -118,18 +110,20 @@ npm run test:e2e
 - O relatório HTML fica em `playwright-report/` (`npx playwright show-report`); trace, vídeo e screenshot de cada falha ficam em `test-results/`. No CI, as duas pastas sobem como artefato quando o job falha.
 - Fora do CI, o Playwright reaproveita um `vite preview` que já esteja na porta 4173. Depois de mudar o código, pare esse servidor para os testes rodarem sobre o build novo.
 
-## Rotas da aplicação
+## Rotas
 
-| Rota                                 | Tela                                                                   | Acesso                                                 |
-| ------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------ |
-| `/`                                  | Início (hero, destaques, filtros, catálogo paginado, promoções e blog) | Público                                                |
-| `/nft/$nftId`                        | Detalhe do NFT (`?edition=<id>` opcional)                              | Público                                                |
-| `/cart`                              | Carrinho de NFTs e resumo da carteira                                  | Público                                                |
-| `/login`, `/register`                | Autenticação e criação de conta                                        | Visitante (redireciona usuários já autenticados)       |
-| `/checkout`                          | Pagamento com carteira e revisão da cotação                            | Privado (redireciona para `/login?redirect=/checkout`) |
-| `/orders/$orderId`                   | Estado do pedido (`pending`, `confirmed` com recibo ou `rejected`)     | Privado (restrito ao dono do pedido)                   |
-| `/profile`, `/wallets`, `/favorites` | Dados do perfil, carteiras e lista de interesse                        | Privado                                                |
+| Rota                                 | Tela                                                     | Acesso                                                      |
+| ------------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------- |
+| `/`                                  | Início e catálogo                                        | Público                                                     |
+| `/nft/$nftId`                        | Detalhe do NFT (`?edition=<id>` opcional)                | Público                                                     |
+| `/cart`                              | Carrinho                                                 | Público, de visitante ou do usuário logado                  |
+| `/login`, `/register`                | Login e cadastro                                         | Visitante; com sessão, segue para `redirect` ou `/`         |
+| `/checkout`                          | Pagamento                                                | Privado: sem sessão, vai para `/login?redirect=%2Fcheckout` |
+| `/orders/$orderId`                   | Pedido (`pending`, `confirmed` com recibo ou `rejected`) | Privado; a API só entrega o pedido ao dono                  |
+| `/profile`, `/wallets`, `/favorites` | Perfil, carteiras e lista de interesse                   | Privado                                                     |
 
-## Arquitetura e decisões técnicas
+## Deploy
 
-Consulte o documento [ARCHITECTURE.md](./ARCHITECTURE.md) para detalhes sobre camadas, contratos REST, eventos Socket.IO, política de sessão, estratégia de cache, idempotência e desvios documentados em relação ao Figma.
+A Vercel roda `npm run build` e serve `dist/` (`vercel.json`), em Node 24. Todo caminho que não é arquivo cai no `index.html`, então acesso direto e refresh funcionam em qualquer rota. `/assets/*` tem cache imutável de um ano e o `mockServiceWorker.js` vai com `no-cache`, para o navegador não ficar preso a um worker antigo. O painel da Vercel não tem variável de ambiente: o `.env` versionado já liga os mocks.
+
+As decisões de arquitetura, os contratos e as limitações estão em [ARCHITECTURE.md](./ARCHITECTURE.md).
