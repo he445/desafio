@@ -18,9 +18,12 @@ flowchart TD
 
 Regras de dependência aplicadas via ESLint (`no-restricted-imports`):
 
-- `src/routes/` consome `src/features/`, `src/components/`, `src/lib/` e `src/contracts/`.
-- Componentes nunca importam Axios diretamente; toda comunicação HTTP passa por `src/features/*/api.ts` e `src/features/*/queries.ts`.
-- O código da aplicação não importa nada de `src/mocks/`, exceto o `import('./mocks/browser')` dinâmico em `src/main.tsx`.
+- `axios` só é importado em `src/lib/http.ts`, a instância única.
+- `src/routes/`, `src/components/` e `src/features/*/components|hooks/` não importam `axios` nem `@/lib/http`: os dados chegam pelos hooks de `src/features/*/queries.ts`, que usam `src/features/*/api.ts`.
+- O código da aplicação não importa nada de `src/mocks/`; o único acesso é o `import('./mocks/browser')` dinâmico em `src/main.tsx`.
+- `src/mocks/` só importa de `src/contracts/` e `src/lib/eth.ts`, além das bibliotecas.
+
+A direção `routes/` → `features/` → `lib/`, `contracts/` e `components/` é convenção do projeto, sem trava de lint.
 
 ### Ordem de boot no cliente
 
