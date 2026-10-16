@@ -1,4 +1,5 @@
 import type { z } from 'zod'
+import { copy } from '@/content/copy'
 
 export type ApiErrorKind = 'http' | 'network' | 'timeout' | 'canceled' | 'parse'
 
@@ -45,7 +46,7 @@ export function parseApiResponse<T extends z.ZodType>(schema: T, data: unknown):
   throw new ApiError({
     kind: 'parse',
     code: 'INVALID_RESPONSE',
-    message: 'O servidor respondeu num formato inesperado.',
+    message: copy.errors.invalidResponse,
     retryable: false,
   })
 }

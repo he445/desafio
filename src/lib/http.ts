@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios'
 import { ApiErrorEnvelopeSchema } from '@/contracts'
+import { copy } from '@/content/copy'
 import { ApiError } from './api-error'
 import { getGuestCartId, getSessionToken } from './storage'
 
@@ -35,7 +36,7 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError({
       kind: 'canceled',
       code: 'CANCELED',
-      message: 'Requisição cancelada.',
+      message: copy.errors.canceled,
       retryable: false,
     })
   }
@@ -43,7 +44,7 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError({
       kind: 'network',
       code: 'UNKNOWN_ERROR',
-      message: 'Ocorreu um erro inesperado.',
+      message: copy.errors.unexpected,
       retryable: false,
     })
   }
@@ -51,7 +52,7 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError({
       kind: 'timeout',
       code: 'TIMEOUT',
-      message: 'A operação demorou mais que o esperado. Tente novamente.',
+      message: copy.errors.timeout,
       retryable: true,
     })
   }
@@ -59,7 +60,7 @@ export function toApiError(error: unknown): ApiError {
     return new ApiError({
       kind: 'network',
       code: 'NETWORK_ERROR',
-      message: 'Sem conexão com o servidor. Verifique sua rede e tente novamente.',
+      message: copy.errors.network,
       retryable: true,
     })
   }
@@ -83,10 +84,7 @@ export function toApiError(error: unknown): ApiError {
     kind: 'http',
     status,
     code: status >= 500 ? 'INTERNAL' : 'HTTP_ERROR',
-    message:
-      status >= 500
-        ? 'Erro temporário no servidor. Tente novamente.'
-        : 'Não foi possível concluir a solicitação.',
+    message: status >= 500 ? copy.errors.server : copy.errors.request,
     retryable: status === 429 || status === 500 || status === 503,
   })
 }

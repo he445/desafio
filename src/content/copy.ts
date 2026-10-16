@@ -376,5 +376,14 @@ export const copy = {
     nftNotFoundTitle: 'NFT não encontrado',
     backToMarket: 'Voltar ao mercado',
   },
+  errors: {
+    canceled: 'Requisição cancelada.',
+    unexpected: 'Ocorreu um erro inesperado.',
+    timeout: 'A operação demorou mais que o esperado. Tente novamente.',
+    network: 'Sem conexão com o servidor. Verifique sua rede e tente novamente.',
+    server: 'Erro temporário no servidor. Tente novamente.',
+    request: 'Não foi possível concluir a solicitação.',
+    invalidResponse: 'O servidor respondeu num formato inesperado.',
+  },
   validation: VALIDATION_MESSAGES,
 } as const

@@ -25,7 +25,7 @@ Regras de dependência, travadas por `no-restricted-imports` em `eslint.config.j
 - `axios` só é importado em `src/lib/http.ts`, a instância única.
 - `src/routes/`, `src/components/` e `src/features/*/{components,hooks}/` não importam `@/lib/http`: os dados chegam pelos hooks de `src/features/*/queries.ts`, que usam `src/features/*/api.ts`.
 - `src/components/` não importa `features/`, `routes/` nem `app/`. Layout e ui recebem dados por props, e a rota faz a ligação: a raiz passa a sessão, o contador do carrinho e o logout para o header e a tab bar.
-- `src/features/` não importa `routes/` nem `app/`, e `src/lib/` não importa nenhuma camada do app.
+- `src/features/` não importa `routes/` nem `app/`. `src/lib/` não importa `app/`, `routes/`, `features/` nem `components/`; de `src/content/` usa só as mensagens de erro do cliente HTTP.
 - `src/contracts/` só depende de zod e de `src/lib/eth.ts`, porque é compartilhado com o mock; `src/content/` só reaproveita as mensagens de validação dos contratos.
 - O app não importa `src/mocks/`; a única entrada é o `import('./mocks/browser')` dinâmico de `src/main.tsx`. Por sua vez, `src/mocks/` só importa `src/contracts/` e `src/lib/eth.ts`.
 
