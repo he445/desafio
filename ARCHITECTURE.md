@@ -157,7 +157,7 @@ As regras ficam em `src/mocks/domain/` como funções sobre o `MockDb`, sem leit
 | Rota                                 | Arquivo                                                     | Acesso         | Comportamento no `beforeLoad` / `loader`                                                                                                                                                                                 |
 | ------------------------------------ | ----------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `__root`                             | `src/routes/__root.tsx`                                     | Público        | Resolve a sessão com `ensureQueryData` (erro vira `null`) e a coloca no contexto; renderiza `SiteHeader` (desktop), `SiteFooter`, `MobileTabBar` (mobile), `Announcer`, `Toaster` e `ScenarioPanel`                      |
-| `/`                                  | `src/routes/index.tsx`                                      | Público        | Valida search params com `CatalogSearchSchema` (`.catch()` em cada campo) e remove valores padrão da URL via `stripSearchParams`                                                                                         |
+| `/`                                  | `src/routes/index.tsx`                                      | Público        | Valida search params com `CatalogSearchSchema` (`.catch()` em cada campo) e remove valores padrão da URL via `stripSearchParams`; o loader dispara `prefetchQuery` da listagem sem `await`                               |
 | `/nft/$nftId`                        | `src/routes/nft.$nftId.tsx`                                 | Público        | Valida `?edition=`; 404 da API dispara `notFound()` com tela dedicada ("NFT não encontrado")                                                                                                                             |
 | `/cart`                              | `src/routes/cart.tsx`                                       | Público        | O carrinho é o do visitante (`X-Guest-Cart-Id`) ou o do usuário logado                                                                                                                                                   |
 | `/login`, `/register`                | `src/routes/login.tsx`, `src/routes/register.tsx`           | Visitante      | Com sessão, redireciona para `redirect` ou `/`. `redirect` passa por `toSafeRedirect` (`src/lib/redirect.ts`): só vale caminho da mesma origem, resolvido contra uma origem fixa, o que também barra `//host` e `/\host` |
@@ -203,6 +203,16 @@ Padrões do `QueryClient` (`src/app/query-client.ts`):
 | `nftQueryOptions`      | `['nfts', 'detail', id]`  | padrão (30 s) | O loader de `/nft/$nftId` chama `ensureQueryData`; `404` vira `notFound()`                                                                                                       |
 | `nftListQueryOptions`  | `['nfts', 'list', busca]` | 30 s          | `placeholderData: keepPreviousData`: a página anterior fica na tela enquanto a próxima carrega. O `signal` vai para o Axios, então a requisição de uma busca superada é abortada |
 | `featuredQueryOptions` | `['nfts', 'featured']`    | 60 s          | Hero e banner da barra lateral                                                                                                                                                   |
+
+### Cache da listagem
+
+- A chave é a própria busca já validada (`['nfts', 'list', busca]`), então duas URLs que significam a mesma coisa compartilham o cache. O `staleTime` é de 30 s.
+- `placeholderData: keepPreviousData`: ao mudar a vista, a grade anterior continua na tela, atenuada e com `aria-busy="true"`, até a nova chegar. A grade nunca fica em branco entre duas buscas.
+- O `signal` vai para o Axios. Quando a chave perde o último observador, o Query aborta a requisição, e a resposta de uma busca superada não chega à tela. Se chegasse, só preencheria o cache da chave dela, nunca a vista atual.
+- O loader da rota faz `prefetchQuery` da listagem sem `await`: a página renderiza os skeletons na hora e o cache já está aquecido quando a resposta chega.
+- Quatro estados: carregando (skeleton com as dimensões dos cards e da paginação, `aria-busy` e o texto oculto "Carregando catálogo…"), atualizando (os dados anteriores), vazio (com "Limpar filtros" quando há filtro ativo) e erro (a mensagem da `ApiError` e "Tentar novamente"). Falhas retryable são tentadas de novo duas vezes antes de o erro aparecer.
+- Depois de cada mudança de vista, o `Announcer` diz quantos resultados ela tem ("7 resultados"). A primeira carga fica em silêncio.
+- Uma `page` acima do total, digitada na URL ou deixada para trás por um filtro que encolheu a lista, é trocada pela última página com `replace`, sem entrada nova no histórico.
 
 ## 8. Reconciliação REST e Socket.IO
 
