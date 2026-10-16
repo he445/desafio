@@ -451,3 +451,33 @@ No app, a API entrega a imagem como `/images/nfts/<arte>-<vista>.webp` e `src/li
 - O socket conecta depois da primeira pintura, então uma mudança feita entre a primeira resposta REST e a primeira conexão não vira evento nem reconciliação. Reconciliar também na primeira conexão repetiria todas as consultas do boot; a janela é de algumas centenas de milissegundos e a próxima resposta REST corrige a tela.
 - Cada aba agenda a liquidação dos pedidos pendentes que encontra no banco; a máquina de estados ignora a segunda transição, então não há confirmação dupla.
 - O `localStorage` tem cerca de 5 MB. Se encher, a gravação falha sem derrubar a requisição e a mudança vale só na memória da aba até o próximo refresh; por isso o avatar precisa chegar reduzido.
+
+## 15. Performance e Lighthouse
+
+Metas e método: Performance ≥ 90, Acessibilidade ≥ 95, Boas práticas ≥ 95 e SEO ≥ 90, no build de produção com o cenário `default`, 3 execuções por página e perfil e mediana por categoria (`npm run lighthouse`, README seção Performance). O reset de storage do Lighthouse fica ligado: cada execução é um primeiro acesso, que baixa e registra o `mockServiceWorker.js` e semeia o banco no `localStorage`. Desligá-lo mediria o worker já ativo e o banco já pronto, que nenhum avaliador vê na primeira visita.
+
+### O que está no caminho crítico
+
+`index.html` → chunk de entrada (2 KB) → em paralelo, o chunk do mock (65 KB gzip: MSW, interceptors, `tough-cookie`, handlers, domínio e seed) e o do app (React, Router, Query, Axios, zod, layout) → registro do worker → rota → `GET /nfts` e `GET /nfts/featured` → imagem do LCP. O `socket.io-client` (9,4 KB) e o painel de cenários chegam por `import()` depois da primeira pintura; devtools não existem no build.
+
+| Medida em `/` (JS até a rede ociosa, gzip) | Antes da fase 11 | Depois   |
+| ------------------------------------------ | ---------------- | -------- |
+| Chunk do MSW                               | 177,6 KB         | 65,1 KB  |
+| Total                                      | 452,0 KB         | 343,7 KB |
+
+A meta de 170 KB não é atingida. O que sobra é o que o app usa no primeiro render: `react-dom` (cerca de 60 KB), Router (25 KB), zod com os contratos (29 KB), Axios e Query (25 KB), MSW (50 KB) e o layout com Radix e Sonner.
+
+### Otimizações aplicadas
+
+- Code splitting por rota (`autoCodeSplitting`): checkout, pedido, perfil, carteiras, favoritos e auth em chunks próprios.
+- `socket.io-client` e painel de cenários fora do caminho crítico (§1, Ordem de boot).
+- Imagem do LCP sem `lazy`, com `fetchpriority="high"` e AVIF/WebP por `srcset` e `sizes` (§13); as demais com `loading="lazy"` e `decoding="async"`.
+- Fonte woff2 auto-hospedada com preload e fallback de métricas ajustadas (§10).
+- Boot leve: hashes PBKDF2 do seed pré-calculados, latência de 40 a 120 ms no `default`.
+- Sem deslocamento: skeletons com as dimensões do conteúdo, `aspect-ratio` nas imagens, toasts e "Reconectando…" sobrepostos, `<main>` com altura mínima até a primeira rota (§10).
+- Cache na Vercel (`vercel.json`, §10). Console limpo: MSW com `quiet` em produção, favicon próprio (antes, um 404 de `/favicon.ico`), rejeição do `update()` do worker descartada.
+- SEO: `lang="pt-BR"`, título e descrição por rota via `head()`, `robots.txt`, links com `href`, meta viewport.
+
+### Abaixo da meta
+
+Performance mobile (`/` 76 e `/nft/emerald-ape-042` 80 na mediana) fica abaixo de 90. O diagnóstico do próprio relatório (`bootup-time`) aponta a avaliação de script: o chunk do app e o do mock somam perto de 1 s sob 4x de CPU, mais cerca de 500 ms não atribuídos (registro e ativação do Service Worker). O LCP simulado passa de 4 s porque a imagem só pode ser pedida depois do worker ativo e das duas respostas da API. Tentado e mantido: o shim do `tldts`, o download em paralelo, a prioridade na grade do celular e o favicon. Não feito, por ser proibido ou mudar o produto: adiar o worker ou abrir a primeira tela sem o mock, trocar as imagens e tirar seções do Início. Desktop fica em 98 nas duas páginas; Acessibilidade, Boas práticas e SEO ficam entre 96 e 100 em todas.

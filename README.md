@@ -112,6 +112,7 @@ Sem cenário, com o Emerald Ape #042 (1/50) no carrinho, o botão "Emerald Ape #
 | `npm run test:e2e`     | `playwright test`                                                                             | Testes E2E em Chromium contra o build servido pelo `vite preview`                                   |
 | `npm run test:e2e:ui`  | `playwright test --ui`                                                                        | Interface do Playwright para depuração local                                                        |
 | `npm run assets`       | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF e WebP dos NFTs                                        |
+| `npm run lighthouse`   | `npm run build && node scripts/lighthouse.mjs`                                                | Build, `vite preview` e as 12 auditorias do Lighthouse em `reports/lighthouse/` (seção Performance) |
 | `npm run ci`           | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | O mesmo pipeline do GitHub Actions, que antes confere a formatação com `format:check`               |
 
 ## Testes
@@ -150,6 +151,26 @@ npm run test:e2e
 - `tests/support/fixtures.ts` esconde o painel de cenários em todo teste, oferece `loginAs(page, 'marina')` (login pelo formulário, sem injetar token), aceita o cenário como opção (`test.use({ scenario: 'slow' })`, aplicado antes da primeira carga) e entrega o `mock`, um driver tipado sobre `window.__mock`. `gotoReady` navega e espera `data-mocks="ready"`. `tests/support/catalog.ts` descreve o catálogo pelo que a pessoa faz (buscar, filtrar, ordenar, paginar), seja na barra lateral do desktop ou no Sheet do mobile. `tests/support/nft-detail.ts` faz o mesmo com o detalhe (coluna do desktop ou barra de compra do mobile). `tests/support/cart.ts` monta o carrinho de visitante pela API (`seedGuestCart`) e descreve a tela do carrinho; `tests/support/checkout.ts` monta o carrinho, entra como Marina por `/login?redirect=/checkout` e descreve as opções de carteira e o botão de confirmar; o `mock.changeEdition` muda preço e estoque no servidor simulado. `mock.waitForSocket(userId)` espera a conexão do usuário certo antes de o teste disparar um evento, e `tests/support/announcements.ts` grava cada texto da live region para contar anúncios.
 - O relatório HTML fica em `playwright-report/` (`npx playwright show-report`); trace, vídeo e screenshot de cada falha ficam em `test-results/`. No CI, as duas pastas sobem como artefato quando o job falha.
 - Fora do CI, o Playwright reaproveita um `vite preview` que já esteja na porta 4173. Depois de mudar o código, pare esse servidor para os testes rodarem sobre o build novo.
+
+## Performance
+
+```bash
+npm run lighthouse
+npm run lighthouse -- --url https://desafio-rosy-kappa.vercel.app
+```
+
+O script (`scripts/lighthouse.mjs`, configuração em `lighthouse.config.mjs`) faz o build, sobe o `vite preview` na porta 4173, abre o Chrome headless com `chrome-launcher` e audita `/` e `/nft/emerald-ape-042` três vezes em cada perfil: `mobile` (configuração padrão do Lighthouse, com throttling simulado de 4x na CPU e 1,6 Mbps) e `desktop` (`desktopConfig`). Os 12 relatórios HTML e JSON e o `summary.md`/`summary.json` com as medianas, o ambiente e a seção "Abaixo da meta" ficam em `reports/lighthouse/`. O Chrome é o do Playwright; `CHROME_PATH` aponta outro. `--url` audita outra origem, mas o relatório versionado é o local. O reset de storage do Lighthouse fica ligado: cada execução é um primeiro acesso, com registro do Service Worker do MSW.
+
+Medianas do relatório versionado (Chrome 141 headless, 4 vCPU, `benchmarkIndex` 1598):
+
+| Página                 | Perfil  | Performance | Acessibilidade | Boas práticas | SEO | LCP    | CLS    | TBT    |
+| ---------------------- | ------- | ----------- | -------------- | ------------- | --- | ------ | ------ | ------ |
+|                        | `/`     | mobile      | 76             | 96            | 100 | 100    | 4,03 s | 0      | 392 ms |
+| `/`                    | desktop | 98          | 100            | 100           | 100 | 1,01 s | 0      | 51 ms  |
+| `/nft/emerald-ape-042` | mobile  | 80          | 100            | 100           | 100 | 4,08 s | 0      | 226 ms |
+| `/nft/emerald-ape-042` | desktop | 98          | 100            | 100           | 100 | 1,03 s | 0      | 5 ms   |        |
+
+Metas: Performance ≥ 90, Acessibilidade ≥ 95, Boas práticas ≥ 95 e SEO ≥ 90. Performance mobile fica abaixo: o MSW e o registro do Service Worker estão no caminho crítico e, sob 4x de CPU, a avaliação de script passa de 1 s. O JS baixado até a rede ficar ociosa em `/` caiu de 452 para 344 KB gzip nesta fase (meta de 170 KB), contando o `socket.io-client` e o painel de cenários, que chegam depois da primeira pintura. Causas e o que foi tentado estão em `reports/lighthouse/summary.md` e em ARCHITECTURE §15.
 
 ## Rotas
 

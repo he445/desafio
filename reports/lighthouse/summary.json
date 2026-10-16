@@ -1,0 +1,182 @@
+{
+  "environment": {
+    "date": "2026-10-16T22:40:11.587Z",
+    "commit": "a9c14ff",
+    "url": "http://localhost:4173",
+    "lighthouse": "13.5.0",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36",
+    "node": "v22.22.0",
+    "os": "Linux 6.18.44-fc-v139 x64",
+    "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz x4",
+    "benchmarkIndex": 1551
+  },
+  "targets": {
+    "performance": 90,
+    "accessibility": 95,
+    "best-practices": 95,
+    "seo": 90
+  },
+  "runs": 3,
+  "groups": [
+    {
+      "page": "home",
+      "path": "/",
+      "profile": "mobile",
+      "scores": {
+        "performance": 76,
+        "accessibility": 96,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "values": {
+        "LCP": 4033.3974,
+        "CLS": 0,
+        "TBT": 391.53229999999985
+      },
+      "throttling": "simulate, RTT 150 ms, 1638 Kbps, CPU 4x",
+      "screen": "412x823 @1.75 mobile",
+      "below": [
+        "performance"
+      ],
+      "diagnostics": {
+        "lcpElement": "a.block > div.relative > picture.contents > img.aspect-square",
+        "lcpPhases": [
+          "timeToFirstByte 6 ms",
+          "resourceLoadDelay 552 ms",
+          "resourceLoadDuration 58 ms",
+          "elementRenderDelay 70 ms"
+        ],
+        "bootup": [
+          "/assets/browser-CP_a22N_.js 565 ms",
+          "Unattributable 543 ms",
+          "/assets/render-DHdU603R.js 522 ms"
+        ],
+        "unusedJs": [
+          "/assets/render-DHdU603R.js 41 KB",
+          "/assets/browser-CP_a22N_.js 39 KB"
+        ],
+        "renderBlocking": []
+      },
+      "medianRun": "home-mobile-2"
+    },
+    {
+      "page": "home",
+      "path": "/",
+      "profile": "desktop",
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "values": {
+        "LCP": 1005.5254,
+        "CLS": 0,
+        "TBT": 50.668274999999994
+      },
+      "throttling": "simulate, RTT 40 ms, 10240 Kbps, CPU 1x",
+      "screen": "1350x940 @1",
+      "below": [],
+      "diagnostics": {
+        "lcpElement": "div.min-w-0 > a.block > picture.contents > img.size-[450px]",
+        "lcpPhases": [
+          "timeToFirstByte 5 ms",
+          "resourceLoadDelay 686 ms",
+          "resourceLoadDuration 74 ms",
+          "elementRenderDelay 80 ms"
+        ],
+        "bootup": [
+          "/assets/render-DHdU603R.js 187 ms",
+          "/assets/browser-CP_a22N_.js 184 ms",
+          "Unattributable 172 ms"
+        ],
+        "unusedJs": [
+          "/assets/browser-CP_a22N_.js 39 KB",
+          "/assets/render-DHdU603R.js 39 KB"
+        ],
+        "renderBlocking": []
+      },
+      "medianRun": "home-desktop-2"
+    },
+    {
+      "page": "nft",
+      "path": "/nft/emerald-ape-042",
+      "profile": "mobile",
+      "scores": {
+        "performance": 80,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "values": {
+        "LCP": 4079.1114000000002,
+        "CLS": 0,
+        "TBT": 225.99999999999977
+      },
+      "throttling": "simulate, RTT 150 ms, 1638 Kbps, CPU 4x",
+      "screen": "412x823 @1.75 mobile",
+      "below": [
+        "performance"
+      ],
+      "diagnostics": {
+        "lcpElement": "div.flex > div.min-w-0 > picture.contents > img.h-[356px]",
+        "lcpPhases": [
+          "timeToFirstByte 7 ms",
+          "resourceLoadDelay 970 ms",
+          "resourceLoadDuration 25 ms",
+          "elementRenderDelay 24 ms"
+        ],
+        "bootup": [
+          "Unattributable 540 ms",
+          "/assets/browser-CP_a22N_.js 520 ms",
+          "/assets/render-DHdU603R.js 334 ms"
+        ],
+        "unusedJs": [
+          "/assets/render-DHdU603R.js 43 KB",
+          "/assets/browser-CP_a22N_.js 40 KB"
+        ],
+        "renderBlocking": []
+      },
+      "medianRun": "nft-mobile-1"
+    },
+    {
+      "page": "nft",
+      "path": "/nft/emerald-ape-042",
+      "profile": "desktop",
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 100,
+        "seo": 100
+      },
+      "values": {
+        "LCP": 1028.8648000000003,
+        "CLS": 0,
+        "TBT": 4.5
+      },
+      "throttling": "simulate, RTT 40 ms, 10240 Kbps, CPU 1x",
+      "screen": "1350x940 @1",
+      "below": [],
+      "diagnostics": {
+        "lcpElement": "div.flex > div.relative > picture.contents > img.size-full",
+        "lcpPhases": [
+          "timeToFirstByte 5 ms",
+          "resourceLoadDelay 969 ms",
+          "resourceLoadDuration 42 ms",
+          "elementRenderDelay 73 ms"
+        ],
+        "bootup": [
+          "Unattributable 183 ms",
+          "/assets/browser-CP_a22N_.js 153 ms",
+          "/assets/skeleton-oFSK6jVP.js 112 ms"
+        ],
+        "unusedJs": [
+          "/assets/render-DHdU603R.js 39 KB",
+          "/assets/browser-CP_a22N_.js 39 KB"
+        ],
+        "renderBlocking": []
+      },
+      "medianRun": "nft-desktop-1"
+    }
+  ]
+}
