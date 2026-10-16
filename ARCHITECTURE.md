@@ -286,6 +286,14 @@ A mutation tem `scope: { id: 'favorite:<nftId>' }`. O `onMutate` de cada clique 
 - Reconexão: no `connect` que sucede uma queda, invalido as consultas de NFTs, carrinho, cotação e pedidos do usuário. Só as ativas refazem a requisição; as outras ficam marcadas como velhas. É o REST que recupera o que mudou enquanto nenhum evento chegava. Se a resposta trouxer a mesma `version` que um evento atrasado, o ledger já barra o evento.
 - `useRealtimeStatus` expõe o estado da conexão (`idle`, `connected`, `disconnected`) para quem precisa de polling de reserva enquanto o socket está fora.
 
+### Cotação revisada no pagamento
+
+O `/checkout` mostra e confirma a cotação que o comprador revisou, guardada em estado local por `useReviewedQuote` (`src/features/checkout/queries.ts`); a consulta de cotação continua sendo a de `qk.quote(dono, rede, versão do carrinho)`.
+
+- Uma cotação nova substitui a revisada sozinha quando a mudança veio do próprio comprador (cupom, rede) ou quando os valores são iguais (mesmas linhas, preços e total, outro `id`).
+- Quando um `nft.updated` leva o ledger a uma versão acima da `nftVersion` de alguma linha revisada (`isQuoteBehind`), a revisada fica obsoleta: "Confirmar compra" fica `aria-disabled`, aparece "Atualizando a cotação…" e, quando a cotação nova chega, uma tabela com o total de cada linha alterada e o total geral antes e agora. Só o clique em "Revisar nova cotação" troca a cotação que será confirmada.
+- O ledger não é reativo: a checagem roda no render, e o render acontece porque o mesmo evento invalida `['cart']` e `['quote']`.
+
 ## 9. Idempotência e revalidação de pedidos
 
 `POST /orders` exige `Idempotency-Key`. O servidor guarda `userId + chave → { hash SHA-256 do corpo, orderId }` por 24 h:
@@ -296,6 +304,12 @@ A mutation tem `scope: { id: 'favorite:<nftId>' }`. O `onMutate` de cada clique 
 A repetição é conferida antes de qualquer outra regra, por isso o reenvio depois de um timeout recupera o pedido mesmo que a conexão da carteira já tenha caído. Para um pedido novo, o servidor revalida só as linhas cotadas: conexão ativa e do mesmo usuário (`409 WALLET_DISCONNECTED`), validade de 10 min, rede da conexão igual à da cotação, cupom igual ao do carrinho e ainda válido, taxa da rede, presença no carrinho com a quantidade cotada, estoque (`409 AVAILABILITY_CONFLICT`) e preço e `version` de cada NFT. Qualquer divergência que não seja de estoque responde `409 QUOTE_OUTDATED` com a cotação nova em `details.quote`. Item extra no carrinho não invalida a cotação.
 
 O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópia gravada uma vez, que o catálogo não altera depois.
+
+### Antes do envio, no cliente
+
+- A conexão da carteira é estado do servidor: escolher um provedor em "Carteira e rede" (ou em "Tipo de carteira", que é o mesmo estado) chama `POST /wallet-connections` com a carteira e a rede escolhidas. A opção mostra "Conectando…", "Conectada" ou "Recusada · Tentar de novo" e cada mudança é anunciada na live region. Trocar de carteira, de rede ou de provedor descarta a conexão anterior (`DELETE /wallet-connections/:id`, sem esperar a resposta).
+- A rede da cotação é sempre a da carteira escolhida. No desktop, o select "Rede" lista as três redes e desabilita, com "(sem carteira)", as que não têm carteira salva; trocar a rede escolhe a carteira principal dela e pede cotação nova.
+- "Confirmar compra" mostra um motivo de bloqueio por vez, na ordem em que o comprador pode agir: cotação obsoleta, problema do carrinho (com link de volta) e carteira não conectada.
 
 ## 10. Registro de decisões
 

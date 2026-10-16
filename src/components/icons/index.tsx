@@ -330,6 +330,16 @@ export function FilterIcon(props: IconProps) {
   )
 }
 
+export function EllipsisVerticalIcon(props: IconProps) {
+  return (
+    <svg {...baseProps(props)}>
+      <circle cx="12" cy="5" r="1.75" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.75" fill="currentColor" />
+      <circle cx="12" cy="19" r="1.75" fill="currentColor" />
+    </svg>
+  )
+}
+
 export function WalletIcon(props: IconProps) {
   return (
     <svg {...baseProps(props)}>
