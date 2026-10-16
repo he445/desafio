@@ -31,7 +31,7 @@ Regras de dependência, travadas por `no-restricted-imports` em `eslint.config.j
 
 ### Ordem de boot no cliente
 
-O `engine.io-client` guarda `globalThis.WebSocket` quando o módulo é avaliado. Se o `socket.io-client` carregasse antes do `worker.start()`, o socket escaparia do MSW. Por isso `src/main.tsx` não tem import estático do app: espera `startMocks()` e só então importa `src/app/render.tsx`.
+O `engine.io-client` guarda `globalThis.WebSocket` quando o módulo é avaliado. Se o `socket.io-client` carregasse antes do `worker.start()`, o socket escaparia do MSW. Por isso `src/main.tsx` não tem import estático do app: espera `startMocks()` e só então importa `src/app/render.tsx`. O próprio app também carrega o `socket.io-client` com `import()`, dentro do `RealtimeConnection`, depois da primeira pintura: o socket não disputa o LCP e o pacote fica fora do JS inicial.
 
 ## 2. Contratos REST
 
@@ -127,6 +127,15 @@ O servidor simulado em `src/mocks/realtime/server.ts` publica um evento sempre q
 - `order.updated` vai só para as conexões autenticadas como `order.userId`. `data` traz `status` (`pending`, `confirmed` ou `rejected`), `rejectionReason` e `transaction`.
 - `version` é a do recurso depois da mudança, a mesma que as respostas REST carregam; é ela que permite descartar evento atrasado (seção 8). `eventId` identifica o envio: o cenário `duplicate-events` repete cada evento com o mesmo `eventId` e depois manda uma cópia com `version` anterior e `eventId` novo.
 - No cenário `offline` nenhum evento sai.
+
+No cliente, `src/features/realtime/components/realtime-connection.tsx` (montado uma vez no layout raiz) registra os ouvintes de `nft.updated` e `order.updated` e entrega cada payload a `applyRealtimeEvent` (`src/features/realtime/apply-event.ts`), que passa por cinco portas antes de tocar o cache:
+
+1. Schema: `RealtimeEventSchema.safeParse`; payload inválido é descartado.
+2. Dono: evento com `userId` diferente do usuário da sessão é descartado, mesmo que o servidor já filtre.
+3. Duplicata e 4. versão: `shouldAcceptEvent` do ledger (seção 8).
+4. Aplicação: `nft.updated` corrige preço, estoque, `priceFrom` e `version` no detalhe, nas páginas de listagem, nos destaques e nos favoritos em cache, marca as listagens como velhas sem refazê-las (a ordem ou o filtro da página podem ter mudado) e, se o NFT está num carrinho em cache, invalida carrinho e cotação, que o servidor recalcula. `order.updated` atualiza o pedido em cache, invalida a lista de pendentes e, em estado terminal, o carrinho.
+
+Cada cache também confere a própria versão antes do patch, porque o ledger é zerado no logout enquanto o catálogo público continua em cache. O anúncio na live region polida sai só para o que a pessoa está vendo ou vai comprar: as edições de um carrinho em cache e as do detalhe aberto. Os textos são "O preço de Emerald Ape #042 (1/50) mudou para 1.35 ETH" e "Emerald Ape #042 (1/50) esgotou"; o `announce` junta mensagens próximas num anúncio só, e `markSideEffectOnce` impede repetir o anúncio da mesma versão.
 
 ## 4. Servidor simulado: transporte, cenários e limitações
 
@@ -267,9 +276,15 @@ A mutation tem `scope: { id: 'favorite:<nftId>' }`. O `onMutate` de cada clique 
 
 - `shouldAcceptEvent` descarta um `eventId` repetido e um evento cuja `version` não passa da conhecida. Um id que saiu da janela de 500 continua barrado pela versão.
 - `markSideEffectOnce` libera toast, navegação ou anúncio uma vez por recurso e versão, e nunca para uma versão mais antiga do que uma que já rodou.
-- Login, logout e troca de usuário zeram o ledger junto com o cache privado.
+- Logout, troca de usuário e sessão expirada zeram o ledger junto com o cache privado (`clearPrivateCache`). O login de um visitante não zera: até ali o ledger só tem versões de NFTs, que são públicas.
 
-A aplicação dos eventos no cache do TanStack Query entra com o cliente Socket.IO.
+### Ciclo da conexão
+
+- Um único socket por aba (`src/features/realtime/socket.ts`), só transporte `websocket`, `autoConnect: false` e backoff determinístico (500 ms a 4 s, sem aleatoriedade). A função `auth` relê o token a cada (re)conexão.
+- O efeito do `RealtimeConnection` depende do `userId` da sessão: login, logout ou troca desconectam e conectam de novo, e o servidor passa a associar a conexão ao usuário novo (ou a nenhum). Os ouvintes saem com `socket.off` na limpeza, então navegar não duplica anúncio.
+- Queda: `disconnect` (exceto o pedido pelo próprio app) ou `connect_error` marcam o estado `disconnected` em `connection-status.ts`. Depois de 2 s desconectado, aparece o aviso "Reconectando…" numa sobreposição fixa no topo, com `role="status"`, sem empurrar o layout.
+- Reconexão: no `connect` que sucede uma queda, invalido as consultas de NFTs, carrinho, cotação e pedidos do usuário. Só as ativas refazem a requisição; as outras ficam marcadas como velhas. É o REST que recupera o que mudou enquanto nenhum evento chegava. Se a resposta trouxer a mesma `version` que um evento atrasado, o ledger já barra o evento.
+- `useRealtimeStatus` expõe o estado da conexão (`idle`, `connected`, `disconnected`) para quem precisa de polling de reserva enquanto o socket está fora.
 
 ## 9. Idempotência e revalidação de pedidos
 
@@ -374,5 +389,6 @@ No app, a API entrega a imagem como `/images/nfts/<arte>-<vista>.webp` e `src/li
 ## 14. Limitações conhecidas
 
 - O servidor simulado vive na aba. Duas abas compartilham o banco pelo `localStorage`, mas os eventos do socket só chegam às conexões da aba que fez a mudança.
+- O socket conecta depois da primeira pintura, então uma mudança feita entre a primeira resposta REST e a primeira conexão não vira evento nem reconciliação. Reconciliar também na primeira conexão repetiria todas as consultas do boot; a janela é de algumas centenas de milissegundos e a próxima resposta REST corrige a tela.
 - Cada aba agenda a liquidação dos pedidos pendentes que encontra no banco; a máquina de estados ignora a segunda transição, então não há confirmação dupla.
 - O `localStorage` tem cerca de 5 MB. Se encher, a gravação falha sem derrubar a requisição e a mudança vale só na memória da aba até o próximo refresh; por isso o avatar precisa chegar reduzido.

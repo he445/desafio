@@ -21,6 +21,7 @@ import { useSessionSync } from '@/features/auth/hooks/use-session-sync'
 import { useSignOut } from '@/features/auth/hooks/use-sign-out'
 import { sessionQueryOptions, useSessionQuery } from '@/features/auth/queries'
 import { useCartItemCount } from '@/features/cart/queries'
+import { RealtimeConnection } from '@/features/realtime/components/realtime-connection'
 import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
@@ -75,6 +76,7 @@ function RootLayout() {
         {showTabBar && <MobileTabBar cartCount={cartCount} />}
       </div>
       <Announcer />
+      <RealtimeConnection />
       <Toaster />
       {showScenarioPanel && (
         <Suspense fallback={null}>
