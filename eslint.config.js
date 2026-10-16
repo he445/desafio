@@ -115,7 +115,7 @@ export default tseslint.config(
     rules: restrictImports([noMocks, libLayers]),
   },
   {
-    files: ['src/lib/http.ts'],
+    files: ['src/lib/http.ts', 'src/lib/http.test.ts'],
     rules: restrictImports([noMocks, libLayers], { allowAxios: true }),
   },
   {

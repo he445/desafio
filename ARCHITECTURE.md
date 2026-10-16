@@ -99,7 +99,13 @@ Valem para todas as rotas: corpo que não é JSON responde `400 BAD_REQUEST`; co
 
 `retryable` é `true` só para 429, 500 e 503. Uma resposta que falha no próprio schema de saída é bug do servidor simulado e vira `500 INTERNAL`; em desenvolvimento, o erro vai para o console.
 
-No cliente (`src/lib/http.ts` e `src/lib/api-error.ts`), qualquer erro (HTTP, falha de conexão do MSW ou timeout do Axios de 8 s) é convertido em `ApiError` com `retryable: true` apenas para falhas de rede, timeout e HTTP 429, 500 e 503.
+No cliente, `src/lib/http.ts` converte todo erro em `ApiError` (`src/lib/api-error.ts`):
+
+- O corpo de erro só é lido se passar no `ApiErrorEnvelopeSchema`; fora dele, a resposta vira `INTERNAL` (5xx) ou `HTTP_ERROR`.
+- O timeout de 8 s chega como `ETIMEDOUT` (`transitional.clarifyTimeoutError`). Sem essa opção o Axios usa `ECONNABORTED` também para conexão abortada, que aqui conta como falha de rede.
+- `retryable` vem do envelope; sem envelope, é `true` para rede, timeout e HTTP 429, 500 e 503.
+- Respostas de sucesso passam por `parseApiResponse`: payload fora do contrato vira `ApiError` com `kind: 'parse'`, tratado pela UI como os demais erros, em vez de um `ZodError` solto.
+- `401 SESSION_EXPIRED` avisa os ouvintes de `onSessionExpired` (seção 5).
 
 ## 3. Eventos Socket.IO
 
@@ -151,7 +157,7 @@ A sessão é um token opaco (`kurio-tok-…`) com expiração, guardado em `loca
 
 - **Boot:** com token salvo, `GET /auth/session`. `401` apaga o token e o usuário segue como visitante. Erro de rede ou `5xx` (cenários `offline` e `flaky`) mantém o token: a navegação continua como visitante e a próxima verificação recupera a sessão.
 - **Revalidação:** a consulta da sessão tem `staleTime: Infinity` e `refetchOnWindowFocus: 'always'`; é o foco da janela que percebe uma sessão vencida em segundo plano.
-- **Expiração durante o uso:** qualquer `401 SESSION_EXPIRED` faz o interceptor do Axios emitir `session:expired` (`src/lib/http.ts`), sem importar o router. O hook `useSessionSync` (`src/features/auth/hooks/use-session-sync.ts`), montado na raiz, grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado e navega para `/login?redirect=<href>&reason=expired`. Ele só age se havia sessão no cache: um token já vencido no boot é resolvido pela própria consulta, e vários `401` seguidos disparam o fluxo uma vez.
+- **Expiração durante o uso:** qualquer `401 SESSION_EXPIRED` faz o interceptor do Axios chamar os ouvintes de `onSessionExpired` (`src/lib/http.ts`), sem importar o router. O hook `useSessionSync` (`src/features/auth/hooks/use-session-sync.ts`), montado na raiz, grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado e navega para `/login?redirect=<href>&reason=expired`. Ele só age se havia sessão no cache: um token já vencido no boot é resolvido pela própria consulta, e vários `401` seguidos disparam o fluxo uma vez.
 - **Limpeza do cache privado** (`clearPrivateCache`): a sessão vira `null` antes de `removeQueries` em `['user']`, `['cart']` e `['quote']`, para nenhuma consulta montada refazer o pedido com a chave do usuário anterior; o ledger de eventos também é zerado.
 - **Logout** (`useSignOut`): `POST /auth/logout` (erro de rede ignorado), apaga o token e o id de visitante, cria um id de visitante novo, limpa o cache privado e, se a rota atual é privada, volta para `/`.
 - **Outras abas:** o evento `storage` em `nftmkt:session` sincroniza login e logout. Se o usuário mudou (logout ou troca de conta), a aba limpa o cache privado e invalida o router, o que tira uma rota privada da tela.
