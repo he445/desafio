@@ -8,6 +8,9 @@ export function Toaster(props: ToasterProps) {
     <Sonner
       theme="dark"
       position={isDesktop ? 'top-right' : 'top-center'}
+      // The phone screens keep back and favorite at the top; a toast over them would block the
+      // retry right after a failure, so it starts 12 px below that row.
+      mobileOffset={{ top: 'calc(max(24px, env(safe-area-inset-top)) + 47px)' }}
       toastOptions={{
         classNames: {
           toast:
