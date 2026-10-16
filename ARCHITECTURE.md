@@ -253,6 +253,7 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 - O painel de cenários é um botão fixo no canto inferior direito. Ele só existe com `VITE_API_MOCKING=enabled`, carrega sob demanda (`lazy`), fica fora do bundle inicial e some nos testes com `window.__hideScenarioPanel`.
 - Onde as duas composições têm estrutura diferente (header ou barra superior, barra lateral de conta ou pílulas, breadcrumb), a página renderiza só uma delas com `useIsDesktop()`, em vez de esconder a outra por CSS. Assim cada página tem um único `h1`: no mobile ele é o título da barra superior; no desktop, onde o Figma não mostra título em conta e pagamento, ele fica visualmente oculto (`sr-only`) e o conteúdo começa nos `h2` do Figma.
 - O `<Link>` do TanStack Router marca `aria-current="page"` em todo link cujo caminho bate, o que em `/` marcava o logo, Mercado, Aprenda e o EXPLORAR do hero, todos apontando para `/` ou `/#âncora`. Esses links usam `NavLink` (`src/components/ui/nav-link.tsx`), que recebe `current` de quem chama; no header, só Início recebe `aria-current`, e só quando a rota é `/`.
+- Carrosséis respeitam `prefers-reduced-motion`: setas do teclado e dots pulam direto para o slide, sem animar. Sem autoplay.
 - Os toasts ficam no canto superior direito no desktop e centralizados no topo no mobile (`src/components/ui/sonner.tsx`), sobre o conteúdo.
 - Páginas com a tab bar fixa de 126 px e sem rodapé (lista de interesse, perfil, carteiras e pedido) ganham `pb-[150px]` no `main`, para o fim do conteúdo não ficar atrás da barra.
 
@@ -265,11 +266,14 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 | Rodapé desktop                                   | Faixas com 250, 88 e 236 px de altura fixa; medalhões de 204 px | Alturas viram mínimas e, entre 1024 e 1279 px, a faixa 3 vira grade de 4 colunas e a newsletter encolhe até 280 px | O texto real em Roboto Mono não cabe nos 250 px e vazava para a faixa seguinte, inclusive em 1440 px |
 | Header                                           | Ícone de saída no "Entrar" e "Entrar" mesmo logado              | Ícone de entrada; logado, "Conta" com menu (Dados do perfil, Carteiras, Lista de interesse e Sair)                 | Estado logado não desenhado                                                                          |
 | Header em perfil, carteiras e lista de interesse | "Início" ativo                                                  | Nenhum item ativo                                                                                                  | `aria-current` só na página real                                                                     |
+| Dots do carrossel                                | Dots de 8 px com gap de 8 px                                    | Dots de 8 px dentro de um botão de 24 px, com gap visual de 16 px                                                  | Alvo mínimo de 24 × 24 px (WCAG 2.5.8)                                                               |
 | Rodapé                                           | Pássaro do Twitter                                              | Logo do X                                                                                                          | Marca atual                                                                                          |
 
 ## 13. Assets e imagens
 
 As quatro artes principais (`emerald.png`, `nomad.png`, `baron.png` e `golden.png`, 1000 × 1000 px) foram exportadas dos nós originais do Figma e ficam em `assets/figma/`. O script `scripts/build-assets.mjs` gera com `sharp` quatro vistas quadradas de cada arte (inteira, rosto, detalhe e moldura sobre `#241612`) em AVIF e WebP de 320, 640 e 960 px, em `public/images/nfts/<arte>-<vista>-<largura>.<formato>`, mais uma cópia WebP de 640 px sem a largura no nome (`emerald-1.webp`), usada onde o seed guarda uma única imagem. Uma arte com menos de 960 px faz o script parar, para nenhuma variante ser ampliada.
+
+No app, a API entrega a imagem como `/images/nfts/<arte>-<vista>.webp` e `src/lib/images.ts` monta os srcsets AVIF e WebP a partir desse nome, que é a convenção do script. O `ResponsiveImage` (`src/components/ui/responsive-image.tsx`) renderiza `<picture>` com `width`, `height`, `sizes` e `loading="lazy"`. Só a primeira imagem do hero usa `loading="eager"` e `fetchpriority="high"`, por ser a do LCP. Um `src` fora da convenção (uma URL externa, por exemplo) vira um `<img>` simples.
 
 ## 14. Limitações conhecidas
 

@@ -15,3 +15,9 @@ export function imageSets(src: string): ImageSets | null {
     IMAGE_WIDTHS.map((width) => `${base}-${width}.${format} ${width}w`).join(', ')
   return { avif: set('avif'), webp: set('webp') }
 }
+
+// The four Figma characters keep their original art outside the API; the blog and the
+// promotions point at them by name.
+export function artSrc(art: string, view = 1): string {
+  return `/images/nfts/${art}-${view}.webp`
+}

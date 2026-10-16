@@ -8,8 +8,8 @@ const SelectValue = SelectPrimitive.Value
 
 const SelectTrigger = React.forwardRef<
   React.ComponentRef<typeof SelectPrimitive.Trigger>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
->(({ className, children, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & { iconSize?: number }
+>(({ className, children, iconSize = 20, ...props }, ref) => (
   <SelectPrimitive.Trigger
     ref={ref}
     className={cn(
@@ -20,7 +20,7 @@ const SelectTrigger = React.forwardRef<
   >
     {children}
     <SelectPrimitive.Icon asChild>
-      <ChevronDownIcon size={20} className="shrink-0 text-foreground" />
+      <ChevronDownIcon size={iconSize} className="shrink-0 text-foreground" />
     </SelectPrimitive.Icon>
   </SelectPrimitive.Trigger>
 ))

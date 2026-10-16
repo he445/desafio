@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { imageSets } from './images'
+import { artSrc, imageSets } from './images'
 
 describe('imageSets', () => {
   it('builds the AVIF and WebP srcsets the asset script writes', () => {
@@ -13,5 +13,13 @@ describe('imageSets', () => {
     expect(imageSets('https://cdn.example/emerald-1.webp')).toBeNull()
     expect(imageSets('/images/nfts/emerald-1-640.webp')).toBeNull()
     expect(imageSets('data:image/png;base64,AAAA')).toBeNull()
+  })
+})
+
+describe('artSrc', () => {
+  it('points at the first view unless another one is asked for', () => {
+    expect(artSrc('baron')).toBe('/images/nfts/baron-1.webp')
+    expect(artSrc('golden', 3)).toBe('/images/nfts/golden-3.webp')
+    expect(imageSets(artSrc('nomad'))).not.toBeNull()
   })
 })

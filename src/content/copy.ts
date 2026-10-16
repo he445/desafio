@@ -34,6 +34,8 @@ export const copy = {
     back: 'Voltar',
     close: 'Fechar',
     carousel: 'carrossel',
+    slide: 'slide',
+    carouselPage: (page: number, total: number) => `Página ${page} de ${total}`,
   },
   footer: {
     medallions: [
