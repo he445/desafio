@@ -22,9 +22,10 @@ export function useSessionSync(): void {
       onSessionExpired(() => {
         // Without a cached session there is nothing to resume: a token that was already stale
         // at boot is handled by the session query, and a burst of 401s runs this only once.
-        if (!queryClient.getQueryData<AuthResponse | null>(qk.session())) return
+        const expired = queryClient.getQueryData<AuthResponse | null>(qk.session())
+        if (!expired) return
         const href = `${window.location.pathname}${window.location.search}${window.location.hash}`
-        saveResumeContext({ href, reason: 'expired' })
+        saveResumeContext({ href, reason: 'expired', userId: expired.user.id })
         clearStoredSession()
         clearPrivateCache(queryClient)
         void navigate({

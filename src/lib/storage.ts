@@ -7,6 +7,8 @@ export const RESUME_STORAGE_KEY = 'nftmkt:resume'
 export interface ResumeContext {
   href: string
   reason: 'expired'
+  // Whose session expired: only the same person goes back to where they were.
+  userId: string
 }
 
 export function getStoredSession(): Session | null {

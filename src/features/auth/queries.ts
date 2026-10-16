@@ -1,4 +1,4 @@
-import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, type QueryClient } from '@tanstack/react-query'
 import type { AuthResponse } from '@/contracts'
 import { isApiError } from '@/lib/api-error'
 import { qk } from '@/lib/query-keys'
@@ -12,7 +12,7 @@ import {
 } from '@/lib/storage'
 import { clearEventLedger } from '@/features/realtime/event-ledger'
 import { mergeCartApi } from '@/features/cart/api'
-import { fetchSession, logoutApi } from './api'
+import { fetchSession, loginApi, logoutApi, registerApi } from './api'
 
 export function sessionQueryOptions() {
   return queryOptions({
@@ -76,4 +76,12 @@ export async function performLogout(queryClient: QueryClient): Promise<void> {
   clearGuestCartId()
   getOrCreateGuestCartId()
   clearPrivateCache(queryClient)
+}
+
+export function useLoginMutation() {
+  return useMutation({ mutationFn: loginApi })
+}
+
+export function useRegisterMutation() {
+  return useMutation({ mutationFn: registerApi })
 }
