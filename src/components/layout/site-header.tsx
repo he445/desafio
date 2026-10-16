@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils'
 import { CartBadge } from './cart-badge'
 import { OutOfScopeAction } from './out-of-scope'
+import { desktopContainer } from './regions'
 
 export type ActiveNavSection = 'home' | 'market' | 'none'
 
@@ -69,7 +70,9 @@ export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) 
 
   return (
     <header className={cn('mt-6 w-full', divider && 'border-b border-line')}>
-      <div className="mx-auto grid h-[45px] w-full max-w-[1200px] grid-cols-[160px_1fr_auto] items-center px-6 xl:px-0">
+      <div
+        className={cn(desktopContainer, 'grid h-[45px] grid-cols-[160px_1fr_auto] items-center')}
+      >
         <Link
           to="/"
           className="text-sm font-bold tracking-[0.1em] text-foreground focus-visible:outline-none"

@@ -56,6 +56,7 @@ export const copy = {
     ],
     newsletter: {
       title: 'Antecipe-se ao próximo lançamento',
+      label: 'Seu e-mail',
       placeholder: 'digite seu e-mail...',
       submit: 'Enviar',
       note: 'Receba lançamentos selecionados, histórias de criadores e novidades do mercado.',

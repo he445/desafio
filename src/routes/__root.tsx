@@ -12,7 +12,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Announcer } from '@/components/layout/announcer'
 import { MobileTabBar } from '@/components/layout/mobile-tab-bar'
-import { hasMobileTabBar } from '@/components/layout/regions'
+import { desktopContainer, hasMobileTabBar } from '@/components/layout/regions'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
 import { ScenarioPanel } from '@/components/layout/scenario-panel'
 import { SiteFooter } from '@/components/layout/site-footer'
@@ -22,6 +22,7 @@ import { useSignOut } from '@/features/auth/hooks/use-sign-out'
 import { sessionQueryOptions, useSessionQuery } from '@/features/auth/queries'
 import { useCartItemCount } from '@/features/cart/queries'
 import { useIsDesktop } from '@/lib/use-media-query'
+import { cn } from '@/lib/utils'
 
 export interface RouterContext {
   queryClient: QueryClient
@@ -57,7 +58,7 @@ function RootLayout() {
         )}
         <main
           id="main-content"
-          className="mx-auto w-full max-w-[720px] flex-1 px-6 lg:mt-8 lg:max-w-[1248px] xl:max-w-[1200px] xl:px-0"
+          className={cn('mx-auto w-full max-w-[720px] flex-1 px-6 lg:mt-8', desktopContainer)}
         >
           <Outlet />
         </main>

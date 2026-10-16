@@ -217,10 +217,11 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 
 ## 12. Desvios do Figma e ajustes de acessibilidade
 
-| Tela / Elemento                      | No Figma                                    | Na implementação                                                               | Motivo                                                                          |
-| ------------------------------------ | ------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| Borda de inputs, selects e textareas | `#3F2319` (contraste 1,3:1 sobre `#241612`) | Token `--kurio-field` (`#8A6648`, contraste 3,4:1 sobre `#241612`)             | Atender ao contraste mínimo de 3:1 para componentes de formulário (WCAG 1.4.11) |
-| Botão "Aplicar" do cupom mobile      | Texto claro sobre gradiente (2,5:1)         | Fundo sólido `bg-primary` (`#D28A4C`) com texto `text-ink` (`#140D0A`, 6,85:1) | Garantir contraste superior a 4,5:1                                             |
+| Tela / Elemento                      | No Figma                                                        | Na implementação                                                                                                   | Motivo                                                                                               |
+| ------------------------------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Borda de inputs, selects e textareas | `#3F2319` (contraste 1,3:1 sobre `#241612`)                     | Token `--kurio-field` (`#8A6648`, contraste 3,4:1 sobre `#241612`)                                                 | Atender ao contraste mínimo de 3:1 para componentes de formulário (WCAG 1.4.11)                      |
+| Botão "Aplicar" do cupom mobile      | Texto claro sobre gradiente (2,5:1)                             | Fundo sólido `bg-primary` (`#D28A4C`) com texto `text-ink` (`#140D0A`, 6,85:1)                                     | Garantir contraste superior a 4,5:1                                                                  |
+| Rodapé desktop                       | Faixas com 250, 88 e 236 px de altura fixa; medalhões de 204 px | Alturas viram mínimas e, entre 1024 e 1279 px, a faixa 3 vira grade de 4 colunas e a newsletter encolhe até 280 px | O texto real em Roboto Mono não cabe nos 250 px e vazava para a faixa seguinte, inclusive em 1440 px |
 
 ## 13. Assets e imagens
 
