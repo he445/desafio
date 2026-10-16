@@ -12,7 +12,9 @@ function HomePage() {
       <p className="max-w-[557px] text-sm/6 text-body">{copy.home.heroDesktop.description}</p>
       <div className="pt-4">
         <Button asChild size="hero">
-          <Link to="/cart">{copy.home.heroDesktop.cta}</Link>
+          <Link to="/" hash="mercado">
+            {copy.home.heroDesktop.cta}
+          </Link>
         </Button>
       </div>
     </section>

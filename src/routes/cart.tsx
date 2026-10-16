@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { copy } from '@/content/copy'
-import { Button } from '@/components/ui/button'
 
 function CartPage() {
   return (
@@ -12,12 +11,6 @@ function CartPage() {
         / <span aria-current="page">Carrinho</span>
       </nav>
       <h1 className="text-xl font-bold text-heading">{copy.cart.titleMobile}</h1>
-      <div className="rounded-card bg-surface p-8 text-center">
-        <p className="mb-4 text-lg font-bold text-foreground">{copy.cart.emptyTitle}</p>
-        <Button asChild variant="outline">
-          <Link to="/">{copy.cart.emptyCta}</Link>
-        </Button>
-      </div>
     </section>
   )
 }
