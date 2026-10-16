@@ -5,23 +5,39 @@ import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
 import { Breadcrumb } from '@/components/layout/breadcrumb'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
+import { NftDetailMobile } from '@/features/nft/components/nft-detail-mobile'
+import { NftDetailSkeleton } from '@/features/nft/components/nft-detail-skeleton'
+import { NftGallery } from '@/features/nft/components/nft-gallery'
+import { NftInfoTabs } from '@/features/nft/components/nft-info-tabs'
+import { NftPurchasePanel } from '@/features/nft/components/nft-purchase-panel'
+import { RelatedNfts } from '@/features/nft/components/related-nfts'
+import { useNftPurchase } from '@/features/nft/hooks/use-nft-purchase'
 import { nftQueryOptions } from '@/features/nft/queries'
 import { isApiError } from '@/lib/api-error'
 import { useIsDesktop } from '@/lib/use-media-query'
 
 const NftDetailSearchSchema = z.object({
-  edition: z.string().optional().catch(undefined),
+  edition: z.union([z.string(), z.number()]).transform(String).optional().catch(undefined),
 })
 
 function NftDetailPage() {
   const { nftId } = Route.useParams()
+  const { edition } = Route.useSearch()
   const { data: nft } = useSuspenseQuery(nftQueryOptions(nftId))
+  const purchase = useNftPurchase(nft, edition)
   const isDesktop = useIsDesktop()
 
+  if (!isDesktop) return <NftDetailMobile nft={nft} purchase={purchase} />
+
   return (
-    <section className="space-y-6">
-      {isDesktop && <Breadcrumb />}
-      <h1 className="text-[28px] font-bold text-heading">{nft.title}</h1>
+    <section>
+      <Breadcrumb />
+      <div className="mt-8 grid grid-cols-[minmax(0,573fr)_minmax(0,595fr)] gap-8">
+        <NftGallery images={nft.images} title={nft.title} />
+        <NftPurchasePanel nft={nft} purchase={purchase} />
+      </div>
+      <NftInfoTabs nft={nft} />
+      <RelatedNfts nft={nft} />
     </section>
   )
 }
@@ -53,6 +69,7 @@ export const Route = createFileRoute('/nft/$nftId')({
     meta: [{ title: copy.meta.pageTitle(loaderData?.title ?? copy.states.nftNotFoundTitle) }],
   }),
   component: NftDetailPage,
+  pendingComponent: NftDetailSkeleton,
   notFoundComponent: NftNotFoundPage,
   errorComponent: RouteErrorBoundary,
 })

@@ -2,7 +2,7 @@
 
 Marketplace de NFTs da Kurio em React 19 e TypeScript 6, com TanStack Router, TanStack Query e Axios. Não há backend: o MSW 2 simula a API REST no Service Worker e um servidor Socket.IO no WebSocket da própria aba, com banco em `localStorage`, regras de estoque, cotação e pedido, e cenários de falha que se trocam pela URL ou por um painel.
 
-Até aqui estão prontos o servidor simulado (31 rotas REST, eventos e 16 cenários), a casca da aplicação e o Início: hero, catálogo com busca, filtros, abas, ordenação e paginação na URL, promoções e blog, em desktop e mobile. As telas de carrinho, pagamento, pedido e conta ainda mostram só o título e a navegação, o detalhe mostra o nome do NFT vindo da API, e o cliente Socket.IO ainda não está ligado.
+Até aqui estão prontos o servidor simulado (31 rotas REST, eventos e 16 cenários), a casca da aplicação e o Início: hero, catálogo com busca, filtros, abas, ordenação e paginação na URL, promoções e blog, em desktop e mobile; o detalhe do NFT (galeria, edição, quantidade com limite, compra e favorito otimista) e a lista de interesse. As telas de carrinho, pagamento, pedido, perfil e carteiras ainda mostram só o título e a navegação, e o cliente Socket.IO ainda não está ligado.
 
 - Demonstração: [desafio-rosy-kappa.vercel.app](https://desafio-rosy-kappa.vercel.app)
 - Repositório: [github.com/he445/desafio](https://github.com/he445/desafio)
@@ -114,15 +114,15 @@ npm run test:e2e
 
 ## Rotas
 
-| Rota                                 | Tela                                                     | Acesso                                                      |
-| ------------------------------------ | -------------------------------------------------------- | ----------------------------------------------------------- |
-| `/`                                  | Início e catálogo                                        | Público                                                     |
-| `/nft/$nftId`                        | Detalhe do NFT (`?edition=<id>` opcional)                | Público                                                     |
-| `/cart`                              | Carrinho                                                 | Público, de visitante ou do usuário logado                  |
-| `/login`, `/register`                | Login e cadastro                                         | Visitante; com sessão, segue para `redirect` ou `/`         |
-| `/checkout`                          | Pagamento                                                | Privado: sem sessão, vai para `/login?redirect=%2Fcheckout` |
-| `/orders/$orderId`                   | Pedido (`pending`, `confirmed` com recibo ou `rejected`) | Privado; a API só entrega o pedido ao dono                  |
-| `/profile`, `/wallets`, `/favorites` | Perfil, carteiras e lista de interesse                   | Privado                                                     |
+| Rota                                 | Tela                                                                                                                                                   | Acesso                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `/`                                  | Início e catálogo                                                                                                                                      | Público                                                     |
+| `/nft/$nftId`                        | Detalhe do NFT: galeria, edição, quantidade, compra e favorito (`?edition=<id>` opcional; esgotada ou inexistente vira aviso e a primeira com estoque) | Público; favoritar sem sessão leva ao login e volta         |
+| `/cart`                              | Carrinho                                                                                                                                               | Público, de visitante ou do usuário logado                  |
+| `/login`, `/register`                | Login e cadastro                                                                                                                                       | Visitante; com sessão, segue para `redirect` ou `/`         |
+| `/checkout`                          | Pagamento                                                                                                                                              | Privado: sem sessão, vai para `/login?redirect=%2Fcheckout` |
+| `/orders/$orderId`                   | Pedido (`pending`, `confirmed` com recibo ou `rejected`)                                                                                               | Privado; a API só entrega o pedido ao dono                  |
+| `/profile`, `/wallets`, `/favorites` | Perfil, carteiras e lista de interesse (`/favorites` lista os NFTs favoritados)                                                                        | Privado                                                     |
 
 ## Deploy
 

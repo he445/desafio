@@ -4,12 +4,20 @@ import { gridClassName, staggerClassName } from '../grid-layout'
 import { useGridColumns } from '../hooks/use-grid-columns'
 
 // Same blocks and sizes as the cards, so the swap to real content does not move the page.
-export function CatalogSkeleton({ count = 9 }: { count?: number }) {
+export function CatalogSkeleton({
+  count = 9,
+  label = copy.catalog.loading,
+  withPagination = true,
+}: {
+  count?: number
+  label?: string
+  withPagination?: boolean
+}) {
   const { columns, isDesktop } = useGridColumns()
 
   return (
     <div aria-busy="true">
-      <p className="sr-only">{copy.catalog.loading}</p>
+      <p className="sr-only">{label}</p>
       <div aria-hidden="true" className={gridClassName(columns)}>
         {Array.from({ length: count }, (_, index) => (
           <div key={index} className={staggerClassName(index, columns, isDesktop)}>
@@ -19,14 +27,16 @@ export function CatalogSkeleton({ count = 9 }: { count?: number }) {
           </div>
         ))}
       </div>
-      <div
-        aria-hidden="true"
-        className="mt-6 flex justify-center gap-2 lg:mt-[88px] lg:justify-end"
-      >
-        {Array.from({ length: 5 }, (_, index) => (
-          <Skeleton key={index} className="size-[35px] rounded-pagination" />
-        ))}
-      </div>
+      {withPagination && (
+        <div
+          aria-hidden="true"
+          className="mt-6 flex justify-center gap-2 lg:mt-[88px] lg:justify-end"
+        >
+          {Array.from({ length: 5 }, (_, index) => (
+            <Skeleton key={index} className="size-[35px] rounded-pagination" />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

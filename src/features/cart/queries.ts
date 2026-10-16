@@ -1,8 +1,9 @@
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { AddCartItemInput } from '@/contracts'
 import { qk } from '@/lib/query-keys'
 import { getOrCreateGuestCartId } from '@/lib/storage'
 import { useSessionQuery } from '@/features/auth/queries'
-import { fetchCartApi } from './api'
+import { addCartItemApi, fetchCartApi } from './api'
 
 export function resolveCartOwnerKey(userId?: string | null): `guest:${string}` | `user:${string}` {
   if (userId) {
@@ -33,4 +34,15 @@ export function useCartItemCount(): number {
     select: (cart) => cart.items.reduce((total, item) => total + item.quantity, 0),
   })
   return data
+}
+
+export function useAddCartItem() {
+  const queryClient = useQueryClient()
+  const { data: sessionData } = useSessionQuery()
+  const ownerKey = resolveCartOwnerKey(sessionData?.user.id)
+  return useMutation({
+    mutationFn: (input: AddCartItemInput) => addCartItemApi(input),
+    onSuccess: (cart) => queryClient.setQueryData(qk.cart(ownerKey), cart),
+    onError: () => queryClient.invalidateQueries({ queryKey: qk.cart(ownerKey) }),
+  })
 }
