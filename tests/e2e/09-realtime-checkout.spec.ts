@@ -1,5 +1,6 @@
 import { recordAnnouncements } from '../support/announcements'
 import { CartPage, seedGuestCart } from '../support/cart'
+import { CheckoutPage } from '../support/checkout'
 import { expect, test } from '../support/fixtures'
 import { EMERALD, NftDetailPage } from '../support/nft-detail'
 
@@ -76,5 +77,29 @@ test('the detail page shows the new price without a reload', async ({ page, mock
   await mock.changeEdition({ ...FIFTY, price: '1.35' })
 
   await expect(detail.price('1.35')).toBeVisible()
+  await expectSameDocument(page)
+})
+
+test('a price change during checkout blocks the purchase until the new quote is reviewed', async ({
+  page,
+  mock,
+}) => {
+  const checkout = new CheckoutPage(page)
+  await checkout.openWithCart([{ ...FIFTY, quantity: 1 }])
+  await checkout.connect('MetaMask')
+  await expect(checkout.confirm).not.toHaveAttribute('aria-disabled')
+  await mock.waitForSocket('user-marina')
+  await markDocument(page)
+
+  await mock.changeEdition({ ...FIFTY, price: '1.35' })
+
+  await expect(checkout.confirm).toHaveAttribute('aria-disabled', 'true')
+  const row = checkout.review.getByRole('row', { name: /Emerald Ape #042 \(1\/50\)/ })
+  await expect(row).toContainText('1.19 ETH')
+  await expect(row).toContainText('1.35 ETH')
+  await checkout.review.getByRole('button', { name: 'Revisar nova cotação' }).click()
+
+  await expect(checkout.review).toHaveCount(0)
+  await expect(checkout.confirm).not.toHaveAttribute('aria-disabled')
   await expectSameDocument(page)
 })
