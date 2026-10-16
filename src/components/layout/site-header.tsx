@@ -12,10 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { useSignOut } from '@/features/auth/hooks/use-sign-out'
-import { useSessionQuery } from '@/features/auth/queries'
-import { useCartQuery } from '@/features/cart/queries'
 import { cn } from '@/lib/utils'
+import { CartBadge } from './cart-badge'
 import { OutOfScopeAction } from './out-of-scope'
 
 export type ActiveNavSection = 'home' | 'market' | 'none'
@@ -44,18 +42,19 @@ function resolveHeaderConfig(pathname: string): {
   return { divider: true, active: 'home' }
 }
 
-export function SiteHeader() {
+interface SiteHeaderProps {
+  signedIn: boolean
+  cartCount: number
+  onSignOut: () => void
+}
+
+export function SiteHeader({ signedIn, cartCount, onSignOut }: SiteHeaderProps) {
   const location = useLocation()
   const navigate = useNavigate()
-  const signOut = useSignOut()
-  const { data: sessionData } = useSessionQuery()
-  const { data: cart } = useCartQuery()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
 
   const { divider, active } = resolveHeaderConfig(location.pathname)
-  const totalCount = cart?.items.reduce((acc, item) => acc + item.quantity, 0) ?? 0
-  const badgeText = totalCount > 9 ? '9+' : String(totalCount)
 
   const handleSearchSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -163,18 +162,14 @@ export function SiteHeader() {
 
           <Link
             to="/cart"
-            aria-label={`Carrinho, ${totalCount} ${totalCount === 1 ? 'item' : 'itens'}`}
+            aria-label={copy.nav.cartLabel(cartCount)}
             className="relative inline-flex h-8 w-8 items-center justify-center text-foreground transition-colors hover:text-highlight"
           >
             <BuyIcon size={24} />
-            {totalCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-ink">
-                {badgeText}
-              </span>
-            )}
+            <CartBadge count={cartCount} className="-top-1.5 -right-2" />
           </Link>
 
-          {sessionData ? (
+          {signedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="default" size="signIn" aria-label={copy.nav.account}>
@@ -195,7 +190,7 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => {
-                    void signOut()
+                    onSignOut()
                   }}
                 >
                   {copy.account.signOut}

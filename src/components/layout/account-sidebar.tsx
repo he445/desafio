@@ -10,15 +10,17 @@ import {
   LogoutIcon,
   UserIcon,
 } from '@/components/icons'
-import { useSignOut } from '@/features/auth/hooks/use-sign-out'
 import { cn } from '@/lib/utils'
 import { OutOfScopeAction } from './out-of-scope'
 
 export type AccountSection = 'profile' | 'wallets' | 'favorites'
 
-export function AccountSidebar({ active }: { active: AccountSection }) {
-  const signOut = useSignOut()
+interface AccountSidebarProps {
+  active: AccountSection
+  onSignOut: () => void
+}
 
+export function AccountSidebar({ active, onSignOut }: AccountSidebarProps) {
   return (
     <>
       {/* Mobile pill bar */}
@@ -64,7 +66,7 @@ export function AccountSidebar({ active }: { active: AccountSection }) {
         </Link>
         <button
           type="button"
-          onClick={() => void signOut()}
+          onClick={onSignOut}
           className="inline-flex h-9 shrink-0 items-center rounded-pill border border-line px-4 text-sm font-bold text-highlight"
         >
           {copy.account.signOut}
@@ -142,7 +144,7 @@ export function AccountSidebar({ active }: { active: AccountSection }) {
 
         <button
           type="button"
-          onClick={() => void signOut()}
+          onClick={onSignOut}
           className="flex h-10 w-full items-center gap-4 pl-4 text-[15px] font-bold text-highlight transition-colors hover:bg-surface-raised"
         >
           <LogoutIcon size={20} />

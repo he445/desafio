@@ -12,12 +12,15 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Announcer } from '@/components/layout/announcer'
 import { MobileTabBar } from '@/components/layout/mobile-tab-bar'
+import { hasMobileTabBar } from '@/components/layout/regions'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
 import { ScenarioPanel } from '@/components/layout/scenario-panel'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useSessionSync } from '@/features/auth/hooks/use-session-sync'
-import { sessionQueryOptions } from '@/features/auth/queries'
+import { useSignOut } from '@/features/auth/hooks/use-sign-out'
+import { sessionQueryOptions, useSessionQuery } from '@/features/auth/queries'
+import { useCartItemCount } from '@/features/cart/queries'
 import { useIsDesktop } from '@/lib/use-media-query'
 
 export interface RouterContext {
@@ -27,7 +30,9 @@ export interface RouterContext {
 function RootLayout() {
   const isDesktop = useIsDesktop()
   const location = useLocation()
-
+  const { data: session } = useSessionQuery()
+  const cartCount = useCartItemCount()
+  const signOut = useSignOut()
   useSessionSync()
 
   const showFooter = isDesktop || location.pathname === '/'
@@ -43,7 +48,13 @@ function RootLayout() {
         {copy.nav.skipToContent}
       </a>
       <div className="flex min-h-dvh flex-col bg-ink text-foreground">
-        {isDesktop && <SiteHeader />}
+        {isDesktop && (
+          <SiteHeader
+            signedIn={Boolean(session)}
+            cartCount={cartCount}
+            onSignOut={() => void signOut()}
+          />
+        )}
         <main
           id="main-content"
           className="mx-auto w-full max-w-[720px] flex-1 px-6 lg:mt-8 lg:max-w-[1248px] xl:max-w-[1200px] xl:px-0"
@@ -51,7 +62,7 @@ function RootLayout() {
           <Outlet />
         </main>
         {showFooter && <SiteFooter withMobileTabSpacing={showMobileTab} />}
-        {!isDesktop && <MobileTabBar />}
+        {!isDesktop && hasMobileTabBar(location.pathname) && <MobileTabBar cartCount={cartCount} />}
       </div>
       <Announcer />
       <Toaster />

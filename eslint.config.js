@@ -22,22 +22,27 @@ const noHttp = {
   message: 'Components and routes get data from the hooks in features/*/queries.ts.',
 }
 
-const appCode = [
-  'src/app/**/*.{ts,tsx}',
-  'src/routes/**/*.{ts,tsx}',
-  'src/features/**/*.{ts,tsx}',
-  'src/components/**/*.{ts,tsx}',
-  'src/lib/**/*.{ts,tsx}',
-  'src/contracts/**/*.{ts,tsx}',
-  'src/content/**/*.{ts,tsx}',
-]
+// Imports flow routes/ -> features/ -> lib/, contracts/, components/; each layer lists what it
+// may not reach back into.
+function notFrom(layers, message) {
+  return { group: layers.flatMap((layer) => [`@/${layer}`, `@/${layer}/**`]), message }
+}
 
-const uiCode = [
-  'src/routes/**/*.{ts,tsx}',
-  'src/components/**/*.{ts,tsx}',
-  'src/features/*/components/**/*.{ts,tsx}',
-  'src/features/*/hooks/**/*.{ts,tsx}',
-]
+function restrictImports(patterns, { allowAxios = false } = {}) {
+  return {
+    'no-restricted-imports': ['error', { paths: allowAxios ? [] : [noAxios], patterns }],
+  }
+}
+
+const featureLayers = notFrom(['app', 'routes'], 'features/ cannot depend on routes/ or app/.')
+const componentLayers = notFrom(
+  ['app', 'routes', 'features'],
+  'Components receive data through props; routes and features wire them up.',
+)
+const libLayers = notFrom(
+  ['app', 'routes', 'features', 'components'],
+  'lib/ holds framework-free helpers and cannot depend on app layers.',
+)
 
 export default tseslint.config(
   {
@@ -86,22 +91,42 @@ export default tseslint.config(
     },
   },
   {
-    files: appCode,
-    rules: {
-      'no-restricted-imports': ['error', { paths: [noAxios], patterns: [noMocks] }],
-    },
+    files: ['src/app/**/*.{ts,tsx}'],
+    rules: restrictImports([noMocks]),
   },
   {
-    files: uiCode,
-    rules: {
-      'no-restricted-imports': ['error', { paths: [noAxios], patterns: [noMocks, noHttp] }],
-    },
+    files: ['src/routes/**/*.{ts,tsx}'],
+    rules: restrictImports([noMocks, noHttp, notFrom(['app'], 'Routes do not import app/.')]),
+  },
+  {
+    files: ['src/features/**/*.{ts,tsx}'],
+    rules: restrictImports([noMocks, featureLayers]),
+  },
+  {
+    files: ['src/features/*/components/**/*.{ts,tsx}', 'src/features/*/hooks/**/*.{ts,tsx}'],
+    rules: restrictImports([noMocks, noHttp, featureLayers]),
+  },
+  {
+    files: ['src/components/**/*.{ts,tsx}'],
+    rules: restrictImports([noMocks, noHttp, componentLayers]),
+  },
+  {
+    files: ['src/lib/**/*.{ts,tsx}'],
+    rules: restrictImports([noMocks, libLayers]),
   },
   {
     files: ['src/lib/http.ts'],
-    rules: {
-      'no-restricted-imports': ['error', { patterns: [noMocks] }],
-    },
+    rules: restrictImports([noMocks, libLayers], { allowAxios: true }),
+  },
+  {
+    files: ['src/content/**/*.{ts,tsx}'],
+    rules: restrictImports([
+      noMocks,
+      notFrom(
+        ['app', 'routes', 'features', 'components', 'lib'],
+        'content/ holds static text and only reuses contract messages.',
+      ),
+    ]),
   },
   {
     files: ['src/contracts/**/*.{ts,tsx}'],

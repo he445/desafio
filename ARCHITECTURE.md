@@ -2,29 +2,36 @@
 
 ## 1. Camadas e fluxo de dados
 
-A aplicação executa inteiramente no navegador, separada da camada de simulação pela fronteira de rede (`fetch`/`XMLHttpRequest` interceptados pelo Service Worker do MSW e `WebSocket` interceptado por patch do construtor global).
+A aplicação e o servidor simulado rodam na mesma aba, separados pela rede: o Service Worker do MSW intercepta `fetch` e XHR, e o MSW troca a classe global `WebSocket`. Nenhum componente sabe que a resposta é simulada; trocar o mock por um backend real não mexe na UI.
 
 ```mermaid
 flowchart TD
-  Routes["src/routes/* (TanStack Router)"] --> Features["src/features/* (Hooks, Queries, Componentes)"]
-  Features --> Lib["src/lib/http.ts (Axios) & src/features/realtime/socket.ts (socket.io-client)"]
-  Features --> Contracts["src/contracts/* (Schemas Zod)"]
-  Lib -->|HTTP /api/v1/*| MSWRest["src/mocks/handlers/* (MSW Service Worker)"]
-  Lib <-->|WebSocket wss://realtime.nft-market.test| MSWSocket["src/mocks/realtime/* (@mswjs/socket.io-binding)"]
-  MSWRest --> Domain["src/mocks/domain/* (Regras de negócio)"]
-  Domain --> DB["src/mocks/db/* (Persistência em localStorage)"]
-  Domain -->|Emissão de eventos| MSWSocket
+  Routes["src/routes (TanStack Router)"] --> Features["src/features (queries, api, hooks)"]
+  Routes --> Components["src/components (layout e ui, dados por props)"]
+  Features --> Components
+  Features --> Lib["src/lib (http.ts com Axios, storage, eth)"]
+  Features --> Contracts["src/contracts (schemas zod)"]
+  Lib -->|"HTTP /api/v1"| Handlers["src/mocks/handlers (MSW)"]
+  Realtime["src/features/realtime (socket.io-client)"] <-->|"wss://realtime.nft-market.test"| Socket["src/mocks/realtime (socket.io-binding)"]
+  Handlers --> Domain["src/mocks/domain (regras)"]
+  Domain --> Db["src/mocks/db (localStorage)"]
+  Handlers -->|"nft.updated, order.updated"| Socket
 ```
 
-Regras de dependência aplicadas via ESLint (`no-restricted-imports`):
+Hoje `src/features/realtime` tem só o ledger de versões (`event-ledger.ts`); o cliente Socket.IO entra com a camada de tempo real.
 
-- `src/routes/` consome `src/features/`, `src/components/`, `src/lib/` e `src/contracts/`.
-- Componentes nunca importam Axios diretamente; toda comunicação HTTP passa por `src/features/*/api.ts` e `src/features/*/queries.ts`.
-- O código da aplicação não importa nada de `src/mocks/`, exceto o `import('./mocks/browser')` dinâmico em `src/main.tsx`.
+Regras de dependência, travadas por `no-restricted-imports` em `eslint.config.js`:
+
+- `axios` só é importado em `src/lib/http.ts`, a instância única.
+- `src/routes/`, `src/components/` e `src/features/*/{components,hooks}/` não importam `@/lib/http`: os dados chegam pelos hooks de `src/features/*/queries.ts`, que usam `src/features/*/api.ts`.
+- `src/components/` não importa `features/`, `routes/` nem `app/`. Layout e ui recebem dados por props, e a rota faz a ligação: a raiz passa a sessão, o contador do carrinho e o logout para o header e a tab bar.
+- `src/features/` não importa `routes/` nem `app/`, e `src/lib/` não importa nenhuma camada do app.
+- `src/contracts/` só depende de zod e de `src/lib/eth.ts`, porque é compartilhado com o mock; `src/content/` só reaproveita as mensagens de validação dos contratos.
+- O app não importa `src/mocks/`; a única entrada é o `import('./mocks/browser')` dinâmico de `src/main.tsx`. Por sua vez, `src/mocks/` só importa `src/contracts/` e `src/lib/eth.ts`.
 
 ### Ordem de boot no cliente
 
-O pacote `engine.io-client` captura a referência `globalThis.WebSocket` no momento em que o módulo é avaliado. Para evitar que o cliente Socket.IO guarde o construtor nativo antes de o MSW aplicar o patch de WebSocket, `src/main.tsx` não possui imports estáticos da aplicação: primeiro aguarda `startMocks()` (`worker.start()`) e só depois importa `src/app/render.tsx`.
+O `engine.io-client` guarda `globalThis.WebSocket` quando o módulo é avaliado. Se o `socket.io-client` carregasse antes do `worker.start()`, o socket escaparia do MSW. Por isso `src/main.tsx` não tem import estático do app: espera `startMocks()` e só então importa `src/app/render.tsx`.
 
 ## 2. Contratos REST
 

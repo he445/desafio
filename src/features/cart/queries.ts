@@ -25,3 +25,12 @@ export function useCartQuery() {
   const ownerKey = resolveCartOwnerKey(sessionData?.user.id)
   return useQuery(cartQueryOptions(ownerKey))
 }
+
+export function useCartItemCount(): number {
+  const { data: sessionData } = useSessionQuery()
+  const { data = 0 } = useQuery({
+    ...cartQueryOptions(resolveCartOwnerKey(sessionData?.user.id)),
+    select: (cart) => cart.items.reduce((total, item) => total + item.quantity, 0),
+  })
+  return data
+}

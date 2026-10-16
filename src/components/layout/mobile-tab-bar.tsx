@@ -1,31 +1,15 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { BuyIcon, HeartIcon, HomeIcon, ScanIcon, UserIcon } from '@/components/icons'
-import { useCartQuery } from '@/features/cart/queries'
+import { copy } from '@/content/copy'
 import { cn } from '@/lib/utils'
+import { CartBadge } from './cart-badge'
 
-function shouldShowMobileTabBar(pathname: string): boolean {
-  return (
-    pathname === '/' ||
-    pathname.startsWith('/favorites') ||
-    pathname.startsWith('/profile') ||
-    pathname.startsWith('/wallets') ||
-    pathname.startsWith('/orders/')
-  )
-}
-
-export function MobileTabBar() {
+export function MobileTabBar({ cartCount }: { cartCount: number }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { data: cart } = useCartQuery()
 
-  if (!shouldShowMobileTabBar(location.pathname)) {
-    return null
-  }
-
-  const totalCount = cart?.items.reduce((acc, item) => acc + item.quantity, 0) ?? 0
   const isHome = location.pathname === '/'
   const isFavorites = location.pathname.startsWith('/favorites')
-  const isCart = location.pathname.startsWith('/cart')
   const isAccount =
     location.pathname.startsWith('/profile') || location.pathname.startsWith('/wallets')
 
@@ -82,19 +66,11 @@ export function MobileTabBar() {
 
         <Link
           to="/cart"
-          aria-current={isCart ? 'page' : undefined}
-          aria-label={`Carrinho, ${totalCount} ${totalCount === 1 ? 'item' : 'itens'}`}
-          className={cn(
-            'relative flex h-11 w-11 items-center justify-center',
-            isCart ? 'text-highlight' : 'text-body',
-          )}
+          aria-label={copy.nav.cartLabel(cartCount)}
+          className="relative flex h-11 w-11 items-center justify-center text-body"
         >
           <BuyIcon size={20} />
-          {totalCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-ink">
-              {totalCount > 9 ? '9+' : totalCount}
-            </span>
-          )}
+          <CartBadge count={cartCount} className="top-1 right-1" />
         </Link>
 
         <Link

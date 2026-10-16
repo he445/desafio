@@ -20,6 +20,7 @@ export const copy = {
     creators: 'Criadores',
     learn: 'Aprenda',
     cart: 'Carrinho',
+    cartLabel: (count: number) => `Carrinho, ${count} ${count === 1 ? 'item' : 'itens'}`,
     signIn: 'Entrar',
     account: 'Conta',
     searchPlaceholder: 'Explorar coleções',
