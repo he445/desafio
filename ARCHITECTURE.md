@@ -135,6 +135,8 @@ O servidor simulado em `src/mocks/realtime/server.ts` publica um evento sempre q
 - Ping manual: o binding 0.2.0 anuncia `pingInterval: 25000` e `pingTimeout: 5000`, mas nunca envia ping. O mock envia `connection.client.send('2')` a cada 20 s e limpa o intervalo no `close`; sem isso o cliente derruba a conexão por "ping timeout" aos 30 s.
 - Usuário do socket: o binding confirma o CONNECT antes de expor o `auth`, então o mock lê o pacote cru `40{"token":"…"}` e associa a conexão ao `userId`. Sem token válido a conexão fica anônima e só recebe `nft.updated`.
 - Sem rooms nem acks: o binding não tem essas APIs. O mock guarda as conexões num `Map`, filtra por `userId` a cada emissão e não espera confirmação de entrega.
+- Conexão recusada (cenário `offline` ou janela de `__mock.dropSockets({ refuseForMs })`): o mock dispara `error` no WebSocket e depois fecha com 1013, como um navegador faz num handshake recusado. Só com o `close`, o Manager do Socket.IO, que antes do handshake escuta apenas `error`, ficava esperando para sempre e nunca tentava de novo.
+- `window.__mock.listSockets()` devolve o `userId` de cada conexão aberta (`null` para visitante). O E2E espera o socket do usuário certo antes de mudar algo no servidor, porque evento emitido antes da conexão se perde.
 
 ### Banco e domínio
 

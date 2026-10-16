@@ -21,7 +21,13 @@ let refuseConnectionsUntil = 0
 export const realtimeWsHandler = realtimeLink.addEventListener('connection', (connection) => {
   const scenarioId = getActiveScenarioId()
   if (scenarioId === 'offline' || Date.now() < refuseConnectionsUntil) {
-    connection.client.close(1013, 'Service unavailable')
+    // A refused handshake fires `error` before `close` in a browser. The Socket.IO manager
+    // retries only on that error; a bare close would leave it waiting forever.
+    const { client } = connection
+    if ('socket' in client && client.socket instanceof EventTarget) {
+      client.socket.dispatchEvent(new Event('error'))
+    }
+    client.close(1013, 'Service unavailable')
     return
   }
 
@@ -134,6 +140,11 @@ export function broadcastOrderUpdated(order: Order): void {
     },
   }
   emitRawRealtimeEvent(payload)
+}
+
+// Lets a test wait until the page is connected (and as whom) before the server emits anything.
+export function listConnectedUsers(): (string | null)[] {
+  return [...activeConnections.values()].map((conn) => conn.userId)
 }
 
 export function dropAllSockets(opts?: { refuseForMs?: number }): void {

@@ -9,6 +9,7 @@ import {
   broadcastOrderUpdated,
   dropAllSockets,
   emitRawRealtimeEvent,
+  listConnectedUsers,
 } from '@/mocks/realtime/server'
 import {
   clearCustomNetworkRules,
@@ -53,6 +54,7 @@ export interface MockControl {
     data: unknown
   }): void
   dropSockets(opts?: { refuseForMs?: number }): void
+  listSockets(): (string | null)[]
   expireSession(): void
   countOrders(userId: string): number
 }
@@ -110,6 +112,7 @@ export function createMockControl(): MockControl {
     },
     emitRaw: emitRawRealtimeEvent,
     dropSockets: dropAllSockets,
+    listSockets: listConnectedUsers,
     expireSession() {
       expireActiveSessions(loadDb())
       saveDb()
