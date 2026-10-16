@@ -10,7 +10,15 @@ const CARD_IMAGE_SIZES = '(min-width: 1024px) 250px, 168px'
 
 // `grid` is the catalog card (phone and desktop); `carousel` is the 219 px card of the
 // desktop carousels.
-export function NftCard({ nft, variant = 'grid' }: { nft: Nft; variant?: 'grid' | 'carousel' }) {
+export function NftCard({
+  nft,
+  variant = 'grid',
+  priority = false,
+}: {
+  nft: Nft
+  variant?: 'grid' | 'carousel'
+  priority?: boolean
+}) {
   const [image] = nft.images
   const soldOut = nft.editions.every((edition) => edition.available === 0)
   const carousel = variant === 'carousel'
@@ -33,6 +41,7 @@ export function NftCard({ nft, variant = 'grid' }: { nft: Nft; variant?: 'grid' 
               width={image.width}
               height={image.height}
               sizes={carousel ? '212px' : CARD_IMAGE_SIZES}
+              priority={priority}
               className={cn(
                 'aspect-square object-cover',
                 carousel

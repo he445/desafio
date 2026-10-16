@@ -184,15 +184,18 @@ test.describe('home catalog', () => {
     await expect(page.getByTestId('live-announcer')).toHaveText('7 resultados')
   })
 
-  test('the first picture of the page loads first and the carousel dots switch the slide', async ({
+  test('the first pictures of the page load first and the carousel dots switch the slide', async ({
     page,
+    isMobile,
   }) => {
     const catalog = new CatalogPage(page)
     await catalog.open()
 
+    // On the phone the first row of the grid is the largest paint, so it joins the hero.
     const priority = page.locator('img[fetchpriority="high"]')
-    await expect(priority).toHaveCount(1)
-    await expect(priority).toHaveAttribute('loading', 'eager')
+    await expect(priority).toHaveCount(isMobile ? 3 : 1)
+    for (const image of await priority.all())
+      await expect(image).toHaveAttribute('loading', 'eager')
 
     const dots = page.getByRole('button', { name: /^Página \d de 3$/ })
     await expect(dots).toHaveCount(3)

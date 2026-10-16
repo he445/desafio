@@ -15,6 +15,7 @@ export function NftGrid({
   label?: string
 }) {
   const { columns, isDesktop } = useGridColumns()
+  // On the phone the first row of the grid, not the small hero, is the largest paint.
 
   return (
     <ul
@@ -23,7 +24,7 @@ export function NftGrid({
     >
       {items.map((nft, index) => (
         <li key={nft.id} className={staggerClassName(index, columns, isDesktop)}>
-          <NftCard nft={nft} />
+          <NftCard nft={nft} priority={!isDesktop && index < columns} />
         </li>
       ))}
     </ul>

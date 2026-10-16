@@ -5,6 +5,7 @@ import {
   Link,
   Outlet,
   useLocation,
+  useRouterState,
 } from '@tanstack/react-router'
 import type { QueryClient } from '@tanstack/react-query'
 import { copy } from '@/content/copy'
@@ -44,6 +45,9 @@ function RootLayout() {
 
   const showFooter = isDesktop || location.pathname === '/'
   const showTabBar = !isDesktop && hasMobileTabBar(location.pathname)
+  // Until the first route resolves the outlet is empty and the footer would sit in the viewport,
+  // only to be pushed down by the content (a layout shift of about 0.09 on the detail page).
+  const firstLoad = useRouterState({ select: (state) => state.resolvedLocation === undefined })
 
   return (
     <TooltipProvider>
@@ -69,6 +73,7 @@ function RootLayout() {
             'mx-auto w-full max-w-[720px] flex-1 px-6 outline-none lg:mt-8',
             desktopContainer,
             showTabBar && !showFooter && 'pb-[150px]',
+            firstLoad && 'min-h-dvh',
           )}
         >
           <Outlet />

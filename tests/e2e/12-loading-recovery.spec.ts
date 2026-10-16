@@ -203,3 +203,18 @@ test('the wallets page explains a failure and recovers on demand', async ({ page
   ).not.toHaveValue('')
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
+
+test('a failed boot explains itself and reloads on demand', async ({ page }) => {
+  let blocked = true
+  await page.route(/\/assets\/render-[^/]+\.js$/, (route) =>
+    blocked ? route.abort('failed') : route.continue(),
+  )
+  await page.goto('/')
+
+  const alert = page.getByRole('alert').filter({ hasText: 'Não foi possível abrir a Kurio' })
+  await expect(alert).toBeVisible()
+
+  blocked = false
+  await alert.getByRole('button', { name: 'Recarregar' }).click()
+  await expect(new CatalogPage(page).cards.first()).toBeVisible()
+})
