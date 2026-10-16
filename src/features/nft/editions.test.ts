@@ -13,10 +13,15 @@ function cartItem(editionId: string, quantity: number): CartItem {
     id: `item-${editionId}`,
     nftId: 'a',
     editionId,
+    title: 'A',
+    tokenId: '0001',
+    editionName: '1/10',
+    image: '/images/nfts/emerald-1.webp',
     quantity,
     unitPrice: '1',
     unitPriceWhenAdded: '1',
     available: 10,
+    maxPerOrder: 5,
     nftVersion: 1,
   }
 }

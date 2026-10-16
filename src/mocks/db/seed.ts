@@ -3,7 +3,7 @@ import { computePriceFrom } from '@/mocks/domain/inventory'
 import type { CouponRecord, MockDb, MockUserRecord } from './schema'
 
 export const SEED_REFERENCE_DATE = '2026-10-15T12:00:00.000Z'
-export const MOCK_DB_SCHEMA_VERSION = 2
+export const MOCK_DB_SCHEMA_VERSION = 3
 
 export const MARINA_PASSWORD_SALT = 'kurio-salt-marina-v1'
 export const MARINA_PASSWORD_HASH =

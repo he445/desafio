@@ -71,10 +71,15 @@ function newCartItem(nft: Nft, edition: Edition, quantity: number, priceWhenAdde
     id: `ci-${crypto.randomUUID().slice(0, 8)}`,
     nftId: nft.id,
     editionId: edition.id,
+    title: nft.title,
+    tokenId: nft.tokenId,
+    editionName: edition.name,
+    image: nft.images[0]?.src ?? '',
     quantity,
     unitPrice: edition.price,
     unitPriceWhenAdded: priceWhenAdded,
     available: edition.available,
+    maxPerOrder: edition.maxPerOrder,
     nftVersion: nft.version,
   }
   return item

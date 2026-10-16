@@ -5,10 +5,15 @@ export const CartItemSchema = z.object({
   id: z.string(),
   nftId: z.string(),
   editionId: z.string(),
+  title: z.string(),
+  tokenId: z.string(),
+  editionName: z.string(),
+  image: z.string(),
   quantity: z.number().int().positive(),
   unitPrice: EthAmountSchema,
   unitPriceWhenAdded: EthAmountSchema,
   available: z.number().int().nonnegative(),
+  maxPerOrder: z.number().int().positive(),
   nftVersion: z.number().int().positive(),
 })
 export type CartItem = z.infer<typeof CartItemSchema>
