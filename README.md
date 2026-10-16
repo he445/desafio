@@ -84,23 +84,39 @@ Qualquer outro código retorna `422 COUPON_INVALID`.
 
 ## Comandos disponíveis
 
-| Script                       | Comando                                                                                       | Descrição                                                                                    |
-| ---------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `npm run dev`                | `vite`                                                                                        | Servidor de desenvolvimento com mocks ativos                                                 |
-| `npm run build`              | `tsc -b && vite build`                                                                        | Verificação de tipos e build de produção com mocks ativos                                    |
-| `npm run preview`            | `vite preview --port 4173 --strictPort`                                                       | Serve o build otimizado na porta 4173                                                        |
-| `npm run typecheck`          | `tsc -b`                                                                                      | Checagem estrita de tipos (`strict: true`, `noUncheckedIndexedAccess: true`)                 |
-| `npm run lint`               | `eslint . --max-warnings=0`                                                                   | Lint de código, hooks, acessibilidade (`jsx-a11y`), Router, Query e fronteiras de camadas    |
-| `npm run format`             | `prettier --write .`                                                                          | Formatação com ordenação de classes Tailwind                                                 |
-| `npm run format:check`       | `prettier --check .`                                                                          | Verificação de formatação sem alterar arquivos                                               |
-| `npm run test:unit`          | `vitest run`                                                                                  | Testes unitários de aritmética ETH, formatação e regras de domínio                           |
-| `npm run test:e2e`           | `playwright test`                                                                             | Testes E2E em Chromium (desktop, mobile e tablet) contra o build servido pelo `vite preview` |
-| `npm run test:e2e:ui`        | `playwright test --ui`                                                                        | Interface interativa do Playwright para depuração local                                      |
-| `npm run test:visual`        | `playwright test --grep @visual`                                                              | Regressão visual das telas principais                                                        |
-| `npm run test:visual:update` | `playwright test --grep @visual --update-snapshots`                                           | Atualização das baselines de regressão visual                                                |
-| `npm run lighthouse`         | `node scripts/lighthouse.mjs`                                                                 | Auditoria Lighthouse (3 execuções por página e perfil)                                       |
-| `npm run assets`             | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF/WebP dos NFTs                                   |
-| `npm run ci`                 | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | Pipeline completo executado no GitHub Actions                                                |
+| Script                       | Comando                                                                                       | Descrição                                                                                 |
+| ---------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `npm run dev`                | `vite`                                                                                        | Servidor de desenvolvimento com mocks ativos                                              |
+| `npm run build`              | `tsc -b && vite build`                                                                        | Verificação de tipos e build de produção com mocks ativos                                 |
+| `npm run preview`            | `vite preview --port 4173 --strictPort`                                                       | Serve o build otimizado na porta 4173                                                     |
+| `npm run typecheck`          | `tsc -b`                                                                                      | Checagem estrita de tipos (`strict: true`, `noUncheckedIndexedAccess: true`)              |
+| `npm run lint`               | `eslint . --max-warnings=0`                                                                   | Lint de código, hooks, acessibilidade (`jsx-a11y`), Router, Query e fronteiras de camadas |
+| `npm run format`             | `prettier --write .`                                                                          | Formatação com ordenação de classes Tailwind                                              |
+| `npm run format:check`       | `prettier --check .`                                                                          | Verificação de formatação sem alterar arquivos                                            |
+| `npm run test:unit`          | `vitest run`                                                                                  | Testes unitários (seção Testes)                                                           |
+| `npm run test:e2e`           | `playwright test`                                                                             | Testes E2E em Chromium contra o build servido pelo `vite preview`                         |
+| `npm run test:e2e:ui`        | `playwright test --ui`                                                                        | Interface interativa do Playwright para depuração local                                   |
+| `npm run test:visual`        | `playwright test --grep @visual`                                                              | Regressão visual das telas principais                                                     |
+| `npm run test:visual:update` | `playwright test --grep @visual --update-snapshots`                                           | Atualização das baselines de regressão visual                                             |
+| `npm run lighthouse`         | `node scripts/lighthouse.mjs`                                                                 | Auditoria Lighthouse (3 execuções por página e perfil)                                    |
+| `npm run assets`             | `node scripts/build-assets.mjs`                                                               | Copia a fonte variável e gera as vistas AVIF/WebP dos NFTs                                |
+| `npm run ci`                 | `npm run typecheck && npm run lint && npm run test:unit && npm run build && npm run test:e2e` | Pipeline completo executado no GitHub Actions                                             |
+
+## Testes
+
+```bash
+npm run test:unit
+npm run test:e2e
+```
+
+- Unitários (`src/**/*.test.ts`, Vitest): aritmética de ETH, formatação, contratos, cliente HTTP, ledger de eventos e regras do banco simulado. A suíte roda no fuso `America/Sao_Paulo` (`vitest.config.ts`), para as datas não dependerem da máquina.
+- E2E (`tests/e2e`, Playwright): o `webServer` faz o build e sobe o `vite preview` na porta 4173. Os projetos são `desktop` (1440 × 900) e `mobile` (Pixel 7, 390 × 844); o `tablet` (768 × 1024) roda só os testes marcados com `@responsive`.
+  - `00-smoke`: o mock sobe antes do app e o refresh em `/cart` funciona.
+  - `00-mock-api`: chama as 31 rotas REST por `fetch` dentro da página e valida status e corpo com os schemas de `src/contracts`. Roda só no `desktop`, porque o contrato não depende da tela.
+  - `00-routes`: acesso direto a cada rota pública, 404 de rota e de NFT, rota privada que manda ao login e volta depois de entrar, e `redirect` para outro site ignorado.
+- `tests/support/fixtures.ts` esconde o painel de cenários em todo teste; `gotoReady` navega e espera `data-mocks="ready"`.
+- O relatório HTML fica em `playwright-report/` (`npx playwright show-report`); trace, vídeo e screenshot de cada falha ficam em `test-results/`. No CI, as duas pastas sobem como artefato quando o job falha.
+- Fora do CI, o Playwright reaproveita um `vite preview` que já esteja na porta 4173. Depois de mudar o código, pare esse servidor para os testes rodarem sobre o build novo.
 
 ## Rotas da aplicação
 
