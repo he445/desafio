@@ -60,7 +60,7 @@ Qualquer outro código retorna `422 COUPON_INVALID`.
 
 - `?scenario=<id>` na URL aplica o cenário no boot, grava em `localStorage` e tira o parâmetro da URL com `history.replaceState`. Id desconhecido é ignorado.
 - `?reset=1` restaura o seed (48 NFTs) no boot e apaga a sessão, o carrinho de visitante e as tentativas de checkout guardadas no navegador. Com `&scenario=<id>`, já aplica o cenário.
-- O painel flutuante "Cenários", visível só com os mocks ligados, troca o cenário e reseta o banco (as duas ações recarregam a página). Também muda o preço do Emerald Ape #042 para 1.35 ETH, derruba o WebSocket por 2,5 s e expira a sessão.
+- O painel flutuante "Cenários", carregado sob demanda e só com os mocks ligados, troca o cenário e reseta o banco (as duas ações recarregam a página). Também muda o preço do Emerald Ape #042 para 1.35 ETH, derruba o WebSocket por 2,5 s e expira a sessão. Os testes o escondem com `window.__hideScenarioPanel = true` num `addInitScript`.
 - Nos testes, tudo isso passa por `window.__mock` (`setScenario`, `reset`, `setRules`, `hold`, `release`, `changeEdition`, `resolveOrder`, `emitRaw`, `dropSockets`, `expireSession`, `countOrders`).
 
 | Id                      | O que faz                                                                                                                                                    | Exercita                             |

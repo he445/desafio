@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -14,7 +15,6 @@ import { Announcer } from '@/components/layout/announcer'
 import { MobileTabBar } from '@/components/layout/mobile-tab-bar'
 import { desktopContainer, hasMobileTabBar } from '@/components/layout/regions'
 import { RouteErrorBoundary } from '@/components/layout/route-error'
-import { ScenarioPanel } from '@/components/layout/scenario-panel'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
 import { useSessionSync } from '@/features/auth/hooks/use-session-sync'
@@ -23,6 +23,11 @@ import { sessionQueryOptions, useSessionQuery } from '@/features/auth/queries'
 import { useCartItemCount } from '@/features/cart/queries'
 import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
+
+// Mock tooling stays out of the initial bundle and out of the page when tests hide it.
+const ScenarioPanel = lazy(() => import('@/components/layout/scenario-panel'))
+const showScenarioPanel =
+  import.meta.env.VITE_API_MOCKING === 'enabled' && !window.__hideScenarioPanel
 
 export interface RouterContext {
   queryClient: QueryClient
@@ -71,7 +76,11 @@ function RootLayout() {
       </div>
       <Announcer />
       <Toaster />
-      <ScenarioPanel />
+      {showScenarioPanel && (
+        <Suspense fallback={null}>
+          <ScenarioPanel />
+        </Suspense>
+      )}
     </TooltipProvider>
   )
 }

@@ -353,6 +353,17 @@ export const copy = {
     noSecondaryWallet: 'Você ainda não adicionou uma carteira secundária.',
     emptyFavorites: 'Você ainda não favoritou nenhum NFT.',
   },
+  scenarioPanel: {
+    trigger: (scenarioId: string) => `Cenários (${scenarioId})`,
+    title: 'Painel de cenários',
+    description:
+      'Troque o cenário do servidor simulado, restaure o banco ou dispare eventos em tempo real.',
+    actionsTitle: 'Tempo real e sessão',
+    changePrice: 'Emerald Ape #042 a 1.35 ETH',
+    dropSockets: 'Derrubar o WebSocket por 2,5 s',
+    expireSession: 'Expirar a sessão',
+    reset: 'Restaurar o banco',
+  },
   states: {
     emptyCatalogTitle: 'Nenhum NFT encontrado',
     emptyCatalogSubtitle: 'Ajuste os filtros ou limpe a busca.',

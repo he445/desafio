@@ -13,4 +13,5 @@ interface ImportMeta {
 
 interface Window {
   __mock?: import('./mocks/control').MockControl
+  __hideScenarioPanel?: boolean
 }
