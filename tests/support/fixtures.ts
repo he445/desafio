@@ -37,6 +37,17 @@ export class MockDriver {
     await this.page.evaluate((id) => window.__mock?.release(id), gate)
   }
 
+  // Changes price or stock on the server, as another buyer or the seller would.
+  async changeEdition(change: {
+    nftId: string
+    editionId: string
+    price?: string
+    available?: number
+  }): Promise<void> {
+    await this.ready()
+    await this.page.evaluate((next) => window.__mock?.changeEdition(next), change)
+  }
+
   // Every open session reaches its expiry now; the next private request answers 401.
   async expireSession(): Promise<void> {
     await this.ready()

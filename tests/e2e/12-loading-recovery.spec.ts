@@ -1,7 +1,10 @@
+import { CartPage, seedGuestCart } from '../support/cart'
 import { CatalogPage } from '../support/catalog'
 import { expect, gotoReady, test } from '../support/fixtures'
 
 const isNftList = (url: string) => new URL(url).pathname === '/api/v1/nfts'
+const isCart = (url: string) => new URL(url).pathname === '/api/v1/cart'
+const FIFTY = { nftId: 'emerald-ape-042', editionId: 'emerald-ape-042-1-50' }
 
 test.describe('slow network', () => {
   test.use({ scenario: 'slow' })
@@ -24,6 +27,36 @@ test.describe('slow network', () => {
     await expect(page.getByText('Carregando NFT…')).toBeAttached()
     await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible()
     await expect(page.getByText('Carregando NFT…')).toHaveCount(0)
+  })
+
+  test('the cart shows skeletons for the lines and then for the summary', async ({ page }) => {
+    const cart = new CartPage(page)
+    await seedGuestCart(page, [{ ...FIFTY, quantity: 1 }])
+    await cart.open()
+
+    await expect(page.getByText('Carregando carrinho…')).toBeAttached()
+    await expect(cart.lines).toHaveCount(1)
+    await expect(page.getByText('Carregando carrinho…')).toHaveCount(0)
+    await expect(page.getByText('Atualizando o resumo…')).toBeAttached()
+    await expect(cart.checkout).toHaveAttribute('aria-disabled', 'true')
+    await expect(cart.summaryValue('Total')).toHaveText('1.206 ETH')
+    await expect(page.getByText('Atualizando o resumo…')).toHaveCount(0)
+  })
+})
+
+test.describe('offline', () => {
+  test.use({ scenario: 'offline' })
+
+  test('the cart explains the failure and tries again on demand', async ({ page }) => {
+    await gotoReady(page, '/cart')
+
+    const alert = page
+      .getByRole('alert')
+      .filter({ hasText: 'Não foi possível carregar o carrinho' })
+    await expect(alert).toContainText('Sem conexão com o servidor')
+    const asked = page.waitForRequest((request) => isCart(request.url()))
+    await alert.getByRole('button', { name: 'Tentar novamente' }).click()
+    await asked
   })
 })
 
@@ -110,4 +143,27 @@ test('the NFT detail explains a failure and recovers on demand', async ({ page, 
   await mock.clearRules()
   await alert.getByRole('button', { name: 'Tentar novamente' }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Emerald Ape #042' })).toBeVisible()
+})
+
+test('the cart summary explains a failed quote and recovers on demand', async ({ page, mock }) => {
+  const cart = new CartPage(page)
+  await seedGuestCart(page, [{ ...FIFTY, quantity: 1 }])
+  await cart.open()
+  await expect(cart.summaryValue('Total')).toHaveText('1.206 ETH')
+
+  await mock.setRules([
+    {
+      match: { method: 'POST', path: '/quotes' },
+      fail: { kind: 'http', status: 500, code: 'INTERNAL' },
+    },
+  ])
+  await cart.lines.first().getByRole('button', { name: 'Aumentar quantidade' }).click()
+  const alert = cart.summary.getByRole('alert')
+  await expect(alert).toContainText('Não foi possível calcular o resumo.')
+  await expect(cart.checkout).toHaveAttribute('aria-disabled', 'true')
+
+  await mock.clearRules()
+  await alert.getByRole('button', { name: 'Tentar novamente' }).click()
+  await expect(cart.summaryValue('Total')).toHaveText('2.396 ETH')
+  await expect(cart.checkout).not.toHaveAttribute('aria-disabled')
 })
