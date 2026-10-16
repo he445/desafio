@@ -144,8 +144,10 @@ A sessão é um token opaco (`kurio-tok-…`) com expiração, guardado em `loca
 
 - **Boot:** com token salvo, `GET /auth/session`. `401` apaga o token e o usuário segue como visitante. Erro de rede ou `5xx` (cenários `offline` e `flaky`) mantém o token: a navegação continua como visitante e a próxima verificação recupera a sessão.
 - **Revalidação:** a consulta da sessão tem `staleTime: Infinity` e `refetchOnWindowFocus: 'always'`; é o foco da janela que percebe uma sessão vencida em segundo plano.
-- **Expiração durante o uso:** qualquer `401 SESSION_EXPIRED` faz o interceptor do Axios emitir `session:expired` (`src/lib/http.ts`), sem importar o router. O listener em `src/routes/__root.tsx` grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado (`['user']`, `['cart']`, `['quote']`), zera `['session']` e navega para `/login?redirect=<href>&reason=expired`.
-- **Outras abas:** o evento `storage` em `nftmkt:session` sincroniza login e logout.
+- **Expiração durante o uso:** qualquer `401 SESSION_EXPIRED` faz o interceptor do Axios emitir `session:expired` (`src/lib/http.ts`), sem importar o router. O hook `useSessionSync` (`src/features/auth/hooks/use-session-sync.ts`), montado na raiz, grava `{ href, reason: 'expired' }` em `sessionStorage` (`nftmkt:resume`), limpa o cache privado e navega para `/login?redirect=<href>&reason=expired`. Ele só age se havia sessão no cache: um token já vencido no boot é resolvido pela própria consulta, e vários `401` seguidos disparam o fluxo uma vez.
+- **Limpeza do cache privado** (`clearPrivateCache`): a sessão vira `null` antes de `removeQueries` em `['user']`, `['cart']` e `['quote']`, para nenhuma consulta montada refazer o pedido com a chave do usuário anterior; o ledger de eventos também é zerado.
+- **Logout** (`useSignOut`): `POST /auth/logout` (erro de rede ignorado), apaga o token e o id de visitante, cria um id de visitante novo, limpa o cache privado e, se a rota atual é privada, volta para `/`.
+- **Outras abas:** o evento `storage` em `nftmkt:session` sincroniza login e logout. Se o usuário mudou (logout ou troca de conta), a aba limpa o cache privado e invalida o router, o que tira uma rota privada da tela.
 - **Trade-off:** com backend real, o token iria num cookie `httpOnly; Secure; SameSite=Lax` com refresh rotativo. O MSW no navegador não emula `httpOnly`, então optei pelo `localStorage` e mantive todas as chaves privadas com o `userId`.
 
 ## 6. Carrinho, cotação e valores em ETH

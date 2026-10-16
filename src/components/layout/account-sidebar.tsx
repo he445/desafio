@@ -1,5 +1,4 @@
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { copy } from '@/content/copy'
 import {
   ActivityIcon,
@@ -11,21 +10,14 @@ import {
   LogoutIcon,
   UserIcon,
 } from '@/components/icons'
-import { performLogout, useSessionQuery } from '@/features/auth/queries'
+import { useSignOut } from '@/features/auth/hooks/use-sign-out'
 import { cn } from '@/lib/utils'
 import { OutOfScopeAction } from './out-of-scope'
 
 export type AccountSection = 'profile' | 'wallets' | 'favorites'
 
 export function AccountSidebar({ active }: { active: AccountSection }) {
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { data: sessionData } = useSessionQuery()
-
-  const handleLogout = async () => {
-    await performLogout(queryClient, sessionData?.user.id)
-    void navigate({ to: '/' })
-  }
+  const signOut = useSignOut()
 
   return (
     <>
@@ -72,7 +64,7 @@ export function AccountSidebar({ active }: { active: AccountSection }) {
         </Link>
         <button
           type="button"
-          onClick={() => void handleLogout()}
+          onClick={() => void signOut()}
           className="inline-flex h-9 shrink-0 items-center rounded-pill border border-line px-4 text-sm font-bold text-highlight"
         >
           {copy.account.signOut}
@@ -150,7 +142,7 @@ export function AccountSidebar({ active }: { active: AccountSection }) {
 
         <button
           type="button"
-          onClick={() => void handleLogout()}
+          onClick={() => void signOut()}
           className="flex h-10 w-full items-center gap-4 pl-4 text-[15px] font-bold text-highlight transition-colors hover:bg-surface-raised"
         >
           <LogoutIcon size={20} />

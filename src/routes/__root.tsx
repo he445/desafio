@@ -1,13 +1,11 @@
-import { useEffect } from 'react'
 import {
   createRootRouteWithContext,
   HeadContent,
   Link,
   Outlet,
   useLocation,
-  useNavigate,
 } from '@tanstack/react-router'
-import { useQueryClient, type QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from '@tanstack/react-query'
 import { copy } from '@/content/copy'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/sonner'
@@ -18,10 +16,8 @@ import { RouteErrorBoundary } from '@/components/layout/route-error'
 import { ScenarioPanel } from '@/components/layout/scenario-panel'
 import { SiteFooter } from '@/components/layout/site-footer'
 import { SiteHeader } from '@/components/layout/site-header'
-import { onSessionExpired, sessionQueryOptions } from '@/features/auth/queries'
-import { clearEventLedger } from '@/features/realtime/event-ledger'
-import { qk } from '@/lib/query-keys'
-import { clearStoredSession, saveResumeContext } from '@/lib/storage'
+import { useSessionSync } from '@/features/auth/hooks/use-session-sync'
+import { sessionQueryOptions } from '@/features/auth/queries'
 import { useIsDesktop } from '@/lib/use-media-query'
 
 export interface RouterContext {
@@ -31,50 +27,8 @@ export interface RouterContext {
 function RootLayout() {
   const isDesktop = useIsDesktop()
   const location = useLocation()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    const unsubscribe = onSessionExpired(() => {
-      const currentHref = `${window.location.pathname}${window.location.search}${window.location.hash}`
-      saveResumeContext({ href: currentHref, reason: 'expired' })
-      clearStoredSession()
-      clearEventLedger()
-      queryClient.removeQueries({ queryKey: ['user'] })
-      queryClient.removeQueries({ queryKey: ['cart'] })
-      queryClient.removeQueries({ queryKey: ['quote'] })
-      queryClient.setQueryData(qk.session(), null)
-
-      void navigate({
-        to: '/login',
-        search: {
-          redirect: currentHref.startsWith('/login') ? '/' : currentHref,
-          reason: 'expired',
-        },
-      })
-    })
-
-    return unsubscribe
-  }, [navigate, queryClient])
-
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'nftmkt:session') {
-        if (!event.newValue) {
-          clearEventLedger()
-          queryClient.removeQueries({ queryKey: ['user'] })
-          queryClient.removeQueries({ queryKey: ['cart'] })
-          queryClient.removeQueries({ queryKey: ['quote'] })
-          queryClient.setQueryData(qk.session(), null)
-        } else {
-          void queryClient.invalidateQueries({ queryKey: qk.session() })
-        }
-      }
-    }
-
-    window.addEventListener('storage', handleStorage)
-    return () => window.removeEventListener('storage', handleStorage)
-  }, [queryClient])
+  useSessionSync()
 
   const showFooter = isDesktop || location.pathname === '/'
   const showMobileTab = !isDesktop && location.pathname === '/'

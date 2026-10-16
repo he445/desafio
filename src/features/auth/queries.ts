@@ -1,4 +1,4 @@
-import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useQuery, type QueryClient } from '@tanstack/react-query'
 import type { AuthResponse } from '@/contracts'
 import { isApiError } from '@/lib/api-error'
 import { qk } from '@/lib/query-keys'
@@ -12,9 +12,7 @@ import {
 } from '@/lib/storage'
 import { clearEventLedger } from '@/features/realtime/event-ledger'
 import { mergeCartApi } from '@/features/cart/api'
-import { fetchSession, logoutApi, onSessionExpired } from './api'
-
-export { onSessionExpired }
+import { fetchSession, logoutApi } from './api'
 
 export function sessionQueryOptions() {
   return queryOptions({
@@ -43,60 +41,39 @@ export function useSessionQuery() {
   return useQuery(sessionQueryOptions())
 }
 
-export async function applyAuthenticatedSession(
-  queryClient: ReturnType<typeof useQueryClient>,
-  auth: AuthResponse,
-  previousUserId?: string | null,
-) {
-  if (previousUserId && previousUserId !== auth.user.id) {
-    queryClient.removeQueries({ queryKey: qk.user(previousUserId).all })
-    queryClient.removeQueries({ queryKey: ['cart'] })
-    queryClient.removeQueries({ queryKey: ['quote'] })
-    clearEventLedger()
-  }
+export function clearPrivateCache(queryClient: QueryClient): void {
+  queryClient.setQueryData(qk.session(), null)
+  queryClient.removeQueries({ queryKey: ['user'] })
+  queryClient.removeQueries({ queryKey: ['cart'] })
+  queryClient.removeQueries({ queryKey: ['quote'] })
+  clearEventLedger()
+}
+
+export async function applyAuthenticatedSession(queryClient: QueryClient, auth: AuthResponse) {
+  const previous = queryClient.getQueryData<AuthResponse | null>(qk.session())
+  if (previous && previous.user.id !== auth.user.id) clearPrivateCache(queryClient)
 
   setStoredSession(auth.session)
   queryClient.setQueryData(qk.session(), auth)
 
   const guestCartId = getGuestCartId()
-  let adjustments: Awaited<ReturnType<typeof mergeCartApi>>['adjustments'] = []
-
-  if (guestCartId) {
-    try {
-      const merged = await mergeCartApi({ guestCartId })
-      adjustments = merged.adjustments
-      queryClient.setQueryData(qk.cart(`user:${auth.user.id}`), merged.cart)
-      queryClient.removeQueries({ queryKey: qk.cart(`guest:${guestCartId}`) })
-    } catch {
-      // Ignore merge failure if guest cart was empty
-    } finally {
-      clearGuestCartId()
-    }
+  if (!guestCartId) return { adjustments: [] }
+  try {
+    const merged = await mergeCartApi({ guestCartId })
+    queryClient.setQueryData(qk.cart(`user:${auth.user.id}`), merged.cart)
+    queryClient.removeQueries({ queryKey: qk.cart(`guest:${guestCartId}`) })
+    clearGuestCartId()
+    return { adjustments: merged.adjustments }
+  } catch {
+    // The guest id stays in storage, so the next login merges the same cart again.
+    return { adjustments: [] }
   }
-
-  return { adjustments }
 }
 
-export async function performLogout(
-  queryClient: ReturnType<typeof useQueryClient>,
-  currentUserId?: string | null,
-) {
-  try {
-    await logoutApi()
-  } catch {
-    // Network errors during logout are ignored per spec
-  }
-
+export async function performLogout(queryClient: QueryClient): Promise<void> {
+  await logoutApi().catch(() => undefined)
   clearStoredSession()
   clearGuestCartId()
   getOrCreateGuestCartId()
-  clearEventLedger()
-
-  if (currentUserId) {
-    queryClient.removeQueries({ queryKey: qk.user(currentUserId).all })
-  }
-  queryClient.removeQueries({ queryKey: ['user'] })
-  queryClient.removeQueries({ queryKey: ['cart'] })
-  queryClient.removeQueries({ queryKey: ['quote'] })
-  queryClient.setQueryData(qk.session(), null)
+  clearPrivateCache(queryClient)
 }

@@ -1,6 +1,5 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
 import { copy } from '@/content/copy'
 import { BuyIcon, LoginIcon, SearchIcon, UserIcon } from '@/components/icons'
 import { Button } from '@/components/ui/button'
@@ -13,7 +12,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { performLogout, useSessionQuery } from '@/features/auth/queries'
+import { useSignOut } from '@/features/auth/hooks/use-sign-out'
+import { useSessionQuery } from '@/features/auth/queries'
 import { useCartQuery } from '@/features/cart/queries'
 import { cn } from '@/lib/utils'
 import { OutOfScopeAction } from './out-of-scope'
@@ -47,7 +47,7 @@ function resolveHeaderConfig(pathname: string): {
 export function SiteHeader() {
   const location = useLocation()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
+  const signOut = useSignOut()
   const { data: sessionData } = useSessionQuery()
   const { data: cart } = useCartQuery()
   const [searchOpen, setSearchOpen] = useState(false)
@@ -66,19 +66,6 @@ export function SiteHeader() {
       search: trimmed ? { q: trimmed, page: 1 } : { page: 1 },
       hash: 'mercado',
     })
-  }
-
-  const handleLogout = async () => {
-    await performLogout(queryClient, sessionData?.user.id)
-    if (
-      location.pathname.startsWith('/checkout') ||
-      location.pathname.startsWith('/orders') ||
-      location.pathname.startsWith('/profile') ||
-      location.pathname.startsWith('/wallets') ||
-      location.pathname.startsWith('/favorites')
-    ) {
-      void navigate({ to: '/' })
-    }
   }
 
   return (
@@ -208,7 +195,7 @@ export function SiteHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={() => {
-                    void handleLogout()
+                    void signOut()
                   }}
                 >
                   {copy.account.signOut}

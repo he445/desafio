@@ -6,6 +6,7 @@ import {
 } from '@/contracts'
 import { http, onSessionExpired } from '@/lib/http'
 
+// Routes and hooks cannot import lib/http, so the expiration event is exposed from here.
 export { onSessionExpired }
 
 export async function fetchSession(opts?: { signal?: AbortSignal }): Promise<AuthResponse> {
