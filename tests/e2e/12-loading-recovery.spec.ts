@@ -206,7 +206,7 @@ test('the wallets page explains a failure and recovers on demand', async ({ page
 
 test('a failed boot explains itself and reloads on demand', async ({ page }) => {
   let blocked = true
-  await page.route(/\/assets\/render-[^/]+\.js$/, (route) =>
+  await page.route(/\/assets\/app-[^/]+\.js$/, (route) =>
     blocked ? route.abort('failed') : route.continue(),
   )
   await page.goto('/')

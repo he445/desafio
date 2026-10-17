@@ -1,4 +1,4 @@
-import { delay, http, HttpResponse } from 'msw'
+import { delay, http, HttpResponse, passthrough } from 'msw'
 import {
   AVATAR_MAX_BYTES,
   AVATAR_TYPES,
@@ -96,6 +96,13 @@ async function toDataUrl(file: File): Promise<string> {
 }
 
 export const handlers = [
+  // The worker hands every request of the page to these handlers, chunks and images included,
+  // and MSW parses the request cookies again for each handler it tries. Whatever is not the API
+  // leaves at the first one instead of being tested against all the routes below.
+  http.all(
+    ({ request }) => !new URL(request.url).pathname.startsWith(`${API}/`),
+    () => passthrough(),
+  ),
   http.post(
     `${API}/auth/register`,
     withNetwork('POST /auth/register', async ({ request }) => {

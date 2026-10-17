@@ -7,6 +7,9 @@ export function Toaster(props: ToasterProps) {
   return (
     <Sonner
       theme="dark"
+      // Without it, sonner reads the direction with getComputedStyle on every render, which
+      // forces a style recalculation.
+      dir="ltr"
       position={isDesktop ? 'top-right' : 'top-center'}
       // The phone screens keep back and favorite at the top; a toast over them would block the
       // retry right after a failure, so it starts 12 px below that row.

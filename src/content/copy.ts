@@ -1,5 +1,4 @@
 import { VALIDATION_MESSAGES } from '@/contracts'
-import { bootCopy } from './boot-copy'
 
 export const copy = {
   brand: {
@@ -567,6 +566,5 @@ export const copy = {
     request: 'Não foi possível concluir a solicitação.',
     invalidResponse: 'O servidor respondeu num formato inesperado.',
   },
-  boot: bootCopy,
   validation: VALIDATION_MESSAGES,
 } as const
