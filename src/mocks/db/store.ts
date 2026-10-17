@@ -32,8 +32,16 @@ export function loadDb(): MockDb {
       ? parseStoredDb(window.localStorage.getItem(MOCK_DB_STORAGE_KEY))
       : null
   currentDb = stored ?? seedFor(getActiveScenarioId())
-  if (!stored) saveDb()
+  if (!stored) saveSeedWhenIdle()
   return currentDb
+}
+
+// The seed is the same on every boot, so writing it can wait for an idle moment instead of
+// delaying the first response: a tab closed before that seeds again on the next visit.
+function saveSeedWhenIdle(): void {
+  if (typeof window === 'undefined') return
+  if ('requestIdleCallback' in window) requestIdleCallback(saveDb, { timeout: 2000 })
+  else setTimeout(saveDb, 0)
 }
 
 export function saveDb(): void {

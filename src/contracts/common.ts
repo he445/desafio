@@ -1,5 +1,9 @@
 import { z } from 'zod'
 
+// zod compiles a parser for each object schema the first time it parses. These schemas parse a
+// few times per page, so on the first load the compilation cost more than it saved.
+z.config({ jitless: true })
+
 export const VALIDATION_MESSAGES = {
   required: 'Campo obrigatório',
   invalidEmail: 'E-mail inválido',
