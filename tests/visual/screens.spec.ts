@@ -37,6 +37,7 @@ test.describe('visual regression @visual', () => {
 
   test('home', async ({ page }) => {
     await gotoReady(page, '/')
+    await expect(page.getByRole('region', { name: 'NFTs em destaque' })).toBeVisible()
     await expectScreen(page, 'home')
   })
 
