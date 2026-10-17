@@ -18,7 +18,7 @@ flowchart TD
   Handlers -->|"nft.updated, order.updated"| Socket
 ```
 
-Hoje `src/features/realtime` tem só o ledger de versões (`event-ledger.ts`); o cliente Socket.IO entra com a camada de tempo real.
+`src/features/realtime` abre o `socket.io-client` (`socket.ts`, montado por `RealtimeConnection` no layout raiz), passa cada evento pelas portas de `apply-event.ts` e guarda as versões já vistas em `event-ledger.ts` (seções 3 e 8).
 
 Regras de dependência, travadas por `no-restricted-imports` em `eslint.config.js`:
 
@@ -149,7 +149,7 @@ Cada cache também confere a própria versão antes do patch, porque o ledger é
 
 ### Banco e domínio
 
-O banco é um único `MockDb` em `localStorage` (`nftmkt.mockdb.v1`), gravado a cada mutação e recarregado pelo evento `storage` quando outra aba o altera. O campo `schemaVersion` (hoje 2) diferente do esperado descarta o banco e re-semeia.
+O banco é um único `MockDb` em `localStorage` (`nftmkt.mockdb.v1`), gravado a cada mutação e recarregado pelo evento `storage` quando outra aba o altera. Um `schemaVersion` diferente de `MOCK_DB_SCHEMA_VERSION` (3, em `src/mocks/db/seed.ts`) descarta o banco e re-semeia.
 
 As regras ficam em `src/mocks/domain/` como funções sobre o `MockDb`, sem leitura de cenário nem de `localStorage`, testadas com Vitest. `inventory.ts` concentra preço e estoque: toda mudança recalcula `priceFrom`, incrementa a `version` do NFT e a `version` de cada carrinho que o contém, para nenhuma cotação ser reaproveitada com linhas velhas.
 
@@ -337,6 +337,7 @@ O estoque é reservado na criação e devolvido na recusa; o recibo é uma cópi
 | MSW fixado em `^2.15.0`                                                                                                                                       | `msw@latest` (3.0)                                                                   | O `@mswjs/socket.io-binding` 0.2.0 depende da API de eventos de conexão do MSW 2.x                                                                                                                                                                                                              |
 | ESLint fixado em `^9.39.0`                                                                                                                                    | `eslint@latest` (10.x)                                                               | Compatibilidade de peer dependency com `eslint-plugin-jsx-a11y` 6.10.2                                                                                                                                                                                                                          |
 | Validação de search params com Zod 4 direto                                                                                                                   | `@tanstack/zod-adapter`                                                              | O TanStack Router suporta Standard Schema nativamente com Zod 4, dispensando adaptador externo                                                                                                                                                                                                  |
+| Lighthouse pela API do pacote, com `chrome-launcher` (`scripts/lighthouse.mjs`)                                                                               | `@lhci/cli`                                                                          | O `@lhci/cli` 0.15 traz o Lighthouse 12.6; o script usa o 13.5 do projeto, roda cada página e perfil 3 vezes e escreve as medianas em `reports/lighthouse/summary.md`                                                                                                                           |
 | Fonte `Roboto Mono Variable` auto-hospedada em `/fonts/`                                                                                                      | Google Fonts CDN ou import CSS do Fontsource                                         | Evita conexão externa no LCP e mantém caminho fixo sem hash para `<link rel="preload">` no `index.html`, acompanhado de `@font-face` de fallback com métricas ajustadas (`ascent-override: 104.79%`, `descent-override: 27.1%`)                                                                 |
 | `src/routeTree.gen.ts` versionado no Git                                                                                                                      | Gerar apenas em build/dev                                                            | Permite que `npm run typecheck` (`tsc -b`) passe imediatamente após `npm ci` num checkout limpo                                                                                                                                                                                                 |
 | `.env` versionado com padrões públicos da simulação                                                                                                           | `.env.example` com cópia manual                                                      | Não há segredos no projeto; versionar `.env` (ignorando `.env.local` no `.gitignore`) garante que `npm ci && npm run ci` e o deploy na Vercel funcionem sem etapa manual                                                                                                                        |
@@ -460,12 +461,12 @@ Metas e método: Performance ≥ 90, Acessibilidade ≥ 95, Boas práticas ≥ 9
 
 `index.html` → chunk de entrada (2 KB) → em paralelo, o chunk do mock (65 KB gzip: MSW, interceptors, `tough-cookie`, handlers, domínio e seed) e o do app (React, Router, Query, Axios, zod, layout) → registro do worker → rota → `GET /nfts` e `GET /nfts/featured` → imagem do LCP. O `socket.io-client` (9,4 KB) e o painel de cenários chegam por `import()` depois da primeira pintura; devtools não existem no build.
 
-| Medida em `/` (JS até a rede ociosa, gzip) | Antes da fase 11 | Depois   |
-| ------------------------------------------ | ---------------- | -------- |
-| Chunk do MSW                               | 177,6 KB         | 65,1 KB  |
-| Total                                      | 452,0 KB         | 343,7 KB |
+| Medida em `/` (JS até a rede ociosa, gzip) | Antes (`5451647`) | Depois (`a9c14ff`) |
+| ------------------------------------------ | ----------------- | ------------------ |
+| Chunk do MSW                               | 177,6 KB          | 65,1 KB            |
+| Total                                      | 452,0 KB          | 343,7 KB           |
 
-A meta de 170 KB não é atingida. O que sobra é o que o app usa no primeiro render: `react-dom` (cerca de 60 KB), Router (25 KB), zod com os contratos (29 KB), Axios e Query (25 KB), MSW (50 KB) e o layout com Radix e Sonner.
+A meta de 170 KB não é atingida. O que sobra é o que o app usa no primeiro render: `react-dom`, Router, zod com os contratos, Axios, Query, o MSW e o layout com Radix e Sonner.
 
 ### Otimizações aplicadas
 
