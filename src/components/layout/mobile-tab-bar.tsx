@@ -1,10 +1,12 @@
+import { memo } from 'react'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
 import { BuyIcon, HeartIcon, HomeIcon, ScanIcon, UserIcon } from '@/components/icons'
 import { copy } from '@/content/copy'
 import { cn } from '@/lib/utils'
 import { CartBadge } from './cart-badge'
 
-export function MobileTabBar({ cartCount }: { cartCount: number }) {
+// Renders again only when the cart count or the route changes, not on every root layout render.
+export const MobileTabBar = memo(function MobileTabBar({ cartCount }: { cartCount: number }) {
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -88,4 +90,4 @@ export function MobileTabBar({ cartCount }: { cartCount: number }) {
       </div>
     </nav>
   )
-}
+})

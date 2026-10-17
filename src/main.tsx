@@ -23,12 +23,16 @@ async function boot(root: HTMLElement) {
   // socket.io-client, which captures globalThis.WebSocket, is only imported once the first screen
   // has settled, long after the worker started.
   const app = import('./app/render')
+  void app.then(
+    ({ prepareRender }) => setTimeout(prepareRender),
+    () => undefined,
+  )
   if (import.meta.env.VITE_API_MOCKING === 'enabled') {
     const { startMocks } = await import('./mocks/browser')
     await startMocks()
   }
   const { renderApp } = await app
-  renderApp(root)
+  await renderApp(root)
 }
 
 const root = document.getElementById('root')!

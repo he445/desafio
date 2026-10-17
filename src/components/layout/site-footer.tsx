@@ -1,4 +1,4 @@
-import { Fragment, useState, type FormEvent } from 'react'
+import { Fragment, memo, useState, type FormEvent } from 'react'
 import { Link } from '@tanstack/react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -99,7 +99,13 @@ function NewsletterForm() {
   )
 }
 
-export function SiteFooter({ withMobileTabSpacing = false }: { withMobileTabSpacing?: boolean }) {
+// The root layout renders again on every session, cart and route change; the footer depends on
+// none of them.
+export const SiteFooter = memo(function SiteFooter({
+  withMobileTabSpacing = false,
+}: {
+  withMobileTabSpacing?: boolean
+}) {
   return (
     <footer
       className={cn(desktopContainer, 'mt-24 pb-6', withMobileTabSpacing && 'pb-[126px] lg:pb-6')}
@@ -185,4 +191,4 @@ export function SiteFooter({ withMobileTabSpacing = false }: { withMobileTabSpac
       <p className="mt-4 px-6 text-center text-sm/[30px] text-body">{copy.footer.copyright()}</p>
     </footer>
   )
-}
+})
