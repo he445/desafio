@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 import { gotoReady } from './fixtures'
 
-export interface Filters {
+interface Filters {
   category?: string
   network?: string
   sort?: string

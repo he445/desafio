@@ -33,7 +33,7 @@ export const HolderSchema = z.object({
 })
 export type Holder = z.infer<typeof HolderSchema>
 
-export const ApiErrorDetailSchema = z.object({
+const ApiErrorDetailSchema = z.object({
   code: z.string(),
   message: z.string(),
   fieldErrors: z.record(z.string(), z.array(z.string())).optional(),
@@ -45,7 +45,6 @@ export const ApiErrorDetailSchema = z.object({
 export const ApiErrorEnvelopeSchema = z.object({
   error: ApiErrorDetailSchema,
 })
-export type ApiErrorEnvelope = z.infer<typeof ApiErrorEnvelopeSchema>
 
 export function isValidWalletAddressForNetwork(address: string, network: NetworkId): boolean {
   const trimmed = address.trim()

@@ -1,7 +1,7 @@
 import { AVATAR_MAX_BYTES, AVATAR_TYPES } from '@/contracts'
 import { copy } from '@/content/copy'
 
-export const AVATAR_SIZE = 256
+const AVATAR_SIZE = 256
 
 export function avatarFileIssue(file: Pick<File, 'type' | 'size'>): string | null {
   if (!AVATAR_TYPES.includes(file.type)) return copy.account.avatarTypeError

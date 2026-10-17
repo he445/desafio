@@ -24,7 +24,7 @@ export function findEdition(nft: Nft, editionId: string): Edition {
 
 // Every price or stock change bumps the NFT version and the version of each cart that holds
 // it, so cached quotes keyed by cartVersion are never reused with stale lines.
-export function commitNftChange(db: MockDb, nft: Nft): Nft {
+function commitNftChange(db: MockDb, nft: Nft): Nft {
   nft.priceFrom = computePriceFrom(nft.editions)
   nft.version += 1
   for (const cart of Object.values(db.carts)) {

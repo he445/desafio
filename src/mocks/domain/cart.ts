@@ -32,9 +32,9 @@ export const NETWORK_FEES: Record<NetworkId, EthAmount> = {
   solana: '0.001',
 }
 
-export const QUOTE_TTL_MS = 10 * 60_000
+const QUOTE_TTL_MS = 10 * 60_000
 
-export function cartStorageKey(owner: CartOwner, guestCartId: string): string {
+function cartStorageKey(owner: CartOwner, guestCartId: string): string {
   return owner.kind === 'user' ? `user:${owner.userId}` : `guest:${guestCartId}`
 }
 

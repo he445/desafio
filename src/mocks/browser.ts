@@ -7,7 +7,7 @@ import { resumeSettlements } from './realtime/settlements'
 import { resetNetworkState } from './scenarios/network'
 import { isScenarioId } from './scenarios/registry'
 
-export const worker = setupWorker(...handlers, realtimeWsHandler)
+const worker = setupWorker(...handlers, realtimeWsHandler)
 
 function applyBootUrlParams(): void {
   const url = new URL(window.location.href)

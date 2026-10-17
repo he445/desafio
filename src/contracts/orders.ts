@@ -10,7 +10,6 @@ import {
 import { PasswordSchema } from './auth'
 
 export const OrderStatusSchema = z.enum(['pending', 'confirmed', 'rejected'])
-export type OrderStatus = z.infer<typeof OrderStatusSchema>
 
 export const OrderRejectionReasonSchema = z
   .enum(['insufficient_funds', 'wallet_rejected'])
@@ -30,7 +29,7 @@ export const OrderReceiptLineSchema = z.object({
 })
 export type OrderReceiptLine = z.infer<typeof OrderReceiptLineSchema>
 
-export const OrderReceiptSchema = z.object({
+const OrderReceiptSchema = z.object({
   lines: z.array(OrderReceiptLineSchema),
   subtotal: EthAmountSchema,
   discount: EthAmountSchema,
@@ -38,13 +37,11 @@ export const OrderReceiptSchema = z.object({
   total: EthAmountSchema,
   couponCode: z.string().nullable(),
 })
-export type OrderReceipt = z.infer<typeof OrderReceiptSchema>
 
 export const OrderTransactionSchema = z.object({
   hash: z.string(),
   explorerUrl: z.string(),
 })
-export type OrderTransaction = z.infer<typeof OrderTransactionSchema>
 
 export const OrderSchema = z.object({
   id: z.string(),
@@ -79,7 +76,6 @@ export type CreateOrderInput = z.infer<typeof CreateOrderInputSchema>
 export const PendingOrdersResponseSchema = z.object({
   items: z.array(OrderSchema),
 })
-export type PendingOrdersResponse = z.infer<typeof PendingOrdersResponseSchema>
 
 export const WalletConnectionInputSchema = z.object({
   walletId: z.string().min(1, VALIDATION_MESSAGES.required),
@@ -151,7 +147,6 @@ export type Wallet = z.infer<typeof WalletSchema>
 export const WalletsResponseSchema = z.object({
   items: z.array(WalletSchema),
 })
-export type WalletsResponse = z.infer<typeof WalletsResponseSchema>
 
 export const CreateWalletInputSchema = z
   .object({

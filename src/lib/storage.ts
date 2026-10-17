@@ -2,9 +2,9 @@ import type { Session } from '@/contracts'
 
 export const SESSION_STORAGE_KEY = 'nftmkt:session'
 export const GUEST_CART_ID_KEY = 'nftmkt:guest-cart-id'
-export const RESUME_STORAGE_KEY = 'nftmkt:resume'
+const RESUME_STORAGE_KEY = 'nftmkt:resume'
 
-export interface ResumeContext {
+interface ResumeContext {
   href: string
   reason: 'expired'
   // Whose session expired: only the same person goes back to where they were.

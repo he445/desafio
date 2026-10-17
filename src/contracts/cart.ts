@@ -71,14 +71,13 @@ export const MergeCartResponseSchema = z.object({
 })
 export type MergeCartResponse = z.infer<typeof MergeCartResponseSchema>
 
-export const QuoteIssueCodeSchema = z.enum([
+const QuoteIssueCodeSchema = z.enum([
   'PRICE_CHANGED',
   'INSUFFICIENT_STOCK',
   'EDITION_SOLD_OUT',
   'COUPON_INVALID',
   'COUPON_EXPIRED',
 ])
-export type QuoteIssueCode = z.infer<typeof QuoteIssueCodeSchema>
 
 export const QuoteIssueSchema = z.object({
   code: QuoteIssueCodeSchema,

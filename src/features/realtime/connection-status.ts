@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-export type RealtimeStatus = 'idle' | 'connected' | 'disconnected'
+type RealtimeStatus = 'idle' | 'connected' | 'disconnected'
 
 let status: RealtimeStatus = 'idle'
 const listeners = new Set<() => void>()

@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { EthAmountSchema } from './common'
 import { OrderRejectionReasonSchema, OrderStatusSchema, OrderTransactionSchema } from './orders'
 
-export const NftUpdatedDataSchema = z.object({
+const NftUpdatedDataSchema = z.object({
   editions: z.array(
     z.object({
       id: z.string(),
@@ -12,14 +12,12 @@ export const NftUpdatedDataSchema = z.object({
   ),
   priceFrom: EthAmountSchema,
 })
-export type NftUpdatedData = z.infer<typeof NftUpdatedDataSchema>
 
-export const OrderUpdatedDataSchema = z.object({
+const OrderUpdatedDataSchema = z.object({
   status: OrderStatusSchema,
   rejectionReason: OrderRejectionReasonSchema,
   transaction: OrderTransactionSchema.nullable(),
 })
-export type OrderUpdatedData = z.infer<typeof OrderUpdatedDataSchema>
 
 export const NftUpdatedEventSchema = z.object({
   eventId: z.string(),

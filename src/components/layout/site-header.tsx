@@ -18,7 +18,7 @@ import { CartBadge } from './cart-badge'
 import { OutOfScopeAction } from './out-of-scope'
 import { desktopContainer } from './regions'
 
-export type ActiveNavSection = 'home' | 'market' | 'none'
+type ActiveNavSection = 'home' | 'market' | 'none'
 
 function resolveHeaderConfig(pathname: string): {
   divider: boolean

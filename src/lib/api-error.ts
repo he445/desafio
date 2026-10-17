@@ -1,9 +1,9 @@
 import type { z } from 'zod'
 import { copy } from '@/content/copy'
 
-export type ApiErrorKind = 'http' | 'network' | 'timeout' | 'canceled' | 'parse'
+type ApiErrorKind = 'http' | 'network' | 'timeout' | 'canceled' | 'parse'
 
-export interface ApiErrorPayload {
+interface ApiErrorPayload {
   kind: ApiErrorKind
   status?: number
   code: string

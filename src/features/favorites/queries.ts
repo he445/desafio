@@ -8,7 +8,7 @@ import { useSessionQuery } from '@/features/auth/queries'
 import { addFavoriteApi, fetchFavoritesApi, removeFavoriteApi } from './api'
 import { toggleFavorite } from './toggle'
 
-export function favoritesQueryOptions(userId: string) {
+function favoritesQueryOptions(userId: string) {
   return queryOptions({
     queryKey: qk.user(userId).favorites(),
     queryFn: ({ signal }) => fetchFavoritesApi({ signal }),

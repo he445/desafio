@@ -24,7 +24,7 @@ export function resolveCartOwnerKey(userId?: string | null): CartOwnerKey {
   return `guest:${getOrCreateGuestCartId()}`
 }
 
-export function cartQueryOptions(ownerKey: CartOwnerKey) {
+function cartQueryOptions(ownerKey: CartOwnerKey) {
   return queryOptions({
     queryKey: qk.cart(ownerKey),
     staleTime: 0,

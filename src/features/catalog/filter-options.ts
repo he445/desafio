@@ -1,7 +1,7 @@
 import type { CatalogFacets, NetworkId } from '@/contracts'
 import { copy } from '@/content/copy'
 
-export interface FilterOption<Value extends string = string> {
+interface FilterOption<Value extends string = string> {
   value: Value
   label: string
   count: number

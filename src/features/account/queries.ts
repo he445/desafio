@@ -18,14 +18,14 @@ import {
   uploadAvatarApi,
 } from './api'
 
-export function profileQueryOptions(userId: string) {
+function profileQueryOptions(userId: string) {
   return queryOptions({
     queryKey: qk.user(userId).profile(),
     queryFn: ({ signal }) => fetchProfileApi({ signal }),
   })
 }
 
-export function walletsQueryOptions(userId: string) {
+function walletsQueryOptions(userId: string) {
   return queryOptions({
     queryKey: qk.user(userId).wallets(),
     queryFn: ({ signal }) => fetchWalletsApi({ signal }),

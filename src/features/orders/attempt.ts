@@ -1,6 +1,6 @@
 import type { CreateOrderInput } from '@/contracts'
 
-export interface CheckoutAttempt {
+interface CheckoutAttempt {
   key: string
   quoteId: string
   bodyHash: string

@@ -17,7 +17,7 @@ import { sha256Hex } from './crypto'
 import { MockHttpError } from './errors'
 import { adjustStock, findEdition } from './inventory'
 
-export const IDEMPOTENCY_TTL_MS = 24 * 3600_000
+const IDEMPOTENCY_TTL_MS = 24 * 3600_000
 
 const EXPLORER_TX_URL: Record<NetworkId, string> = {
   ethereum: 'https://etherscan.io/tx/',

@@ -1,6 +1,6 @@
-export const IMAGE_WIDTHS = [320, 640, 960] as const
+const IMAGE_WIDTHS = [320, 640, 960] as const
 
-export interface ImageSets {
+interface ImageSets {
   avif: string
   webp: string
 }

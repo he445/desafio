@@ -9,7 +9,7 @@ import { qk } from '@/lib/query-keys'
 import { getKnownResourceVersion, recordResourceVersion } from '@/features/realtime/event-ledger'
 import { placeOrder } from '@/features/orders/place-order'
 
-export type SubmitPhase = 'idle' | 'submitting' | 'verifying'
+type SubmitPhase = 'idle' | 'submitting' | 'verifying'
 
 interface SubmitHandlers {
   onQuoteOutdated: (offered: Quote | undefined) => void

@@ -1,6 +1,6 @@
 import type { CartItem, Edition } from '@/contracts'
 
-export interface EditionChoice {
+interface EditionChoice {
   selected: Edition | undefined
   // The URL asked for an edition that does not exist or is sold out.
   requestedUnavailable: boolean

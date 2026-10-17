@@ -9,7 +9,7 @@ export { expect }
 export const PASSWORD = 'Senha@1234'
 
 // A typed driver over window.__mock: the only way a test changes what the simulated server does.
-export class MockDriver {
+class MockDriver {
   constructor(private readonly page: Page) {}
 
   private async ready(): Promise<void> {

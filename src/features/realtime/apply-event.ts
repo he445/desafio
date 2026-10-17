@@ -14,7 +14,7 @@ import { qk } from '@/lib/query-keys'
 import { shouldAcceptEvent } from './event-ledger'
 import { clearCheckoutAttempt } from '@/features/orders/attempt'
 
-export interface AppliedEvent {
+interface AppliedEvent {
   event: RealtimeEvent
   announcements: string[]
 }

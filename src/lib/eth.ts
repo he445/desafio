@@ -4,10 +4,6 @@ const WEI_BASE = 10n ** 18n
 
 export type EthAmount = string
 
-export function isValidEthAmount(value: string): value is EthAmount {
-  return ETH_REGEX.test(value)
-}
-
 export function parseEth(value: string): bigint {
   if (!ETH_REGEX.test(value)) {
     throw new Error(`Invalid ETH amount: "${value}"`)

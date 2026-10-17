@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { normalizeQuery } from '../search'
 
-export const SEARCH_DEBOUNCE_MS = 300
+const SEARCH_DEBOUNCE_MS = 300
 
 interface SearchBoxOptions {
   // What the URL holds right now.

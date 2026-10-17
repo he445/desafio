@@ -10,9 +10,9 @@ import { assertEmailAvailable, assertUsernameAvailable } from './account'
 import { hashPassword, verifyPassword } from './crypto'
 import { MockHttpError } from './errors'
 
-export const DEFAULT_SESSION_TTL_MS = 24 * 3600_000
+const DEFAULT_SESSION_TTL_MS = 24 * 3600_000
 
-export interface SessionOptions {
+interface SessionOptions {
   now?: number
   ttlMs?: number
 }

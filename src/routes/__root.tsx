@@ -31,7 +31,7 @@ const ScenarioPanel = lazy(() => import('@/components/layout/scenario-panel'))
 const showScenarioPanel =
   import.meta.env.VITE_API_MOCKING === 'enabled' && !window.__hideScenarioPanel
 
-export interface RouterContext {
+interface RouterContext {
   queryClient: QueryClient
 }
 

@@ -11,13 +11,12 @@ export const EditionSchema = z.object({
 })
 export type Edition = z.infer<typeof EditionSchema>
 
-export const NftReviewSchema = z.object({
+const NftReviewSchema = z.object({
   author: z.string(),
   rating: z.number().int().min(1).max(5),
   text: z.string(),
   date: z.iso.date(),
 })
-export type NftReview = z.infer<typeof NftReviewSchema>
 
 export const NftImageSchema = z.object({
   src: z.string(),
@@ -74,8 +73,7 @@ export type CatalogTab = z.infer<typeof CatalogTabSchema>
 export const CatalogSortSchema = z.enum(['recent', 'price_asc', 'price_desc', 'title_asc'])
 export type CatalogSort = z.infer<typeof CatalogSortSchema>
 
-export const CatalogStatusSchema = z.enum(['all', 'available', 'sold_out'])
-export type CatalogStatus = z.infer<typeof CatalogStatusSchema>
+const CatalogStatusSchema = z.enum(['all', 'available', 'sold_out'])
 
 // The router decodes `?q=2024` and `?minPrice=0.5` as numbers before validation.
 const SearchTextSchema = z.union([z.string(), z.number(), z.boolean()]).transform(String)

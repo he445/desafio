@@ -7,7 +7,7 @@ import {
 import type { MockDb } from './schema'
 import { createSeedDb, MOCK_DB_SCHEMA_VERSION } from './seed'
 
-export const MOCK_DB_STORAGE_KEY = 'nftmkt.mockdb.v1'
+const MOCK_DB_STORAGE_KEY = 'nftmkt.mockdb.v1'
 
 let currentDb: MockDb | null = null
 

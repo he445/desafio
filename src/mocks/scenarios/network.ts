@@ -108,7 +108,7 @@ function ruleMatchesRequest(rule: NetworkRule, request: Request): boolean {
   return true
 }
 
-export function buildErrorResponse(params: {
+function buildErrorResponse(params: {
   status: number
   code: string
   message: string

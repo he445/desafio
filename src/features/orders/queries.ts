@@ -6,9 +6,9 @@ import { useRealtimeStatus } from '@/features/realtime/connection-status'
 import { fetchOrderApi, fetchPendingOrdersApi } from './api'
 import { loadCheckoutAttempt } from './attempt'
 
-export const ORDER_FALLBACK_POLL_MS = 2000
+const ORDER_FALLBACK_POLL_MS = 2000
 
-export function orderQueryOptions(userId: string, orderId: string) {
+function orderQueryOptions(userId: string, orderId: string) {
   return queryOptions({
     queryKey: qk.user(userId).order(orderId),
     queryFn: ({ signal }) => fetchOrderApi(orderId, { signal }),
