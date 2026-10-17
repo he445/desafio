@@ -459,7 +459,7 @@ Metas e método: Performance ≥ 90, Acessibilidade ≥ 95, Boas práticas ≥ 9
 
 ### O que está no caminho crítico
 
-`index.html` → chunk de entrada (2 KB) → em paralelo, o chunk do mock (65 KB gzip: MSW, interceptors, `tough-cookie`, handlers, domínio e seed) e o do app (React, Router, Query, Axios, zod, layout) → registro do worker → rota → `GET /nfts` e `GET /nfts/featured` → imagem do LCP. O `socket.io-client` (9,4 KB) e o painel de cenários chegam por `import()` depois da primeira pintura; devtools não existem no build.
+`index.html` → chunk de entrada (1 KB) e helper de preload (0,8 KB) → em paralelo, o chunk do mock (68,7 KB gzip: MSW, interceptors, `tough-cookie`, handlers, domínio e seed) e o do app (228,7 KB gzip: React, Router, Query, Axios, zod com os contratos, layout) → registro do worker → rota → `GET /nfts` e `GET /nfts/featured` → imagem do LCP. O `socket.io-client` (9,7 KB) e o painel de cenários chegam por `import()` depois da primeira pintura; devtools não existem no build.
 
 | Medida em `/` (JS até a rede ociosa, gzip) | Antes (`5451647`) | Depois (`a9c14ff`) |
 | ------------------------------------------ | ----------------- | ------------------ |
@@ -471,6 +471,9 @@ A meta de 170 KB não é atingida. O que sobra é o que o app usa no primeiro re
 ### Otimizações aplicadas
 
 - Code splitting por rota (`autoCodeSplitting`): checkout, pedido, perfil, carteiras, favoritos e auth em chunks próprios.
+- Boot em dois chunks (`vite.config.ts`): o que `src/app/render.tsx` e `src/mocks/browser.ts` importam estaticamente vai para `app` e `mock`, com o helper de preload à parte para a entrada pedir os dois juntos. O padrão gerava cerca de 25 chunks, a maioria abaixo de 2 KB, e no HTTP/1.1 do `vite preview` cada um é uma requisição antes da primeira pintura. Na mesma máquina, a mediana mobile de `/` foi de 81 para 84.
+- MSW: um primeiro handler devolve com `passthrough()` tudo o que não é a API. Sem ele, cada chunk e imagem que o worker repassa era testado contra as 31 rotas, e o MSW reprocessa os cookies (`tough-cookie`) a cada handler testado; o chunk do mock caiu de cerca de 450 para 280 ms em `bootup-time`.
+- `Toaster` com `dir="ltr"`: sem ele o sonner chama `getComputedStyle` a cada render.
 - `socket.io-client` e painel de cenários fora do caminho crítico (§1, Ordem de boot).
 - Imagem do LCP sem `lazy`, com `fetchpriority="high"` e AVIF/WebP por `srcset` e `sizes` (§13); as demais com `loading="lazy"` e `decoding="async"`.
 - Fonte woff2 auto-hospedada com preload e fallback de métricas ajustadas (§10).
@@ -481,4 +484,4 @@ A meta de 170 KB não é atingida. O que sobra é o que o app usa no primeiro re
 
 ### Abaixo da meta
 
-Performance mobile (`/` 76 e `/nft/emerald-ape-042` 80 na mediana) fica abaixo de 90. O diagnóstico do próprio relatório (`bootup-time`) aponta a avaliação de script: o chunk do app e o do mock somam perto de 1 s sob 4x de CPU, mais cerca de 500 ms não atribuídos (registro e ativação do Service Worker). O LCP simulado passa de 4 s porque a imagem só pode ser pedida depois do worker ativo e das duas respostas da API. Tentado e mantido: o shim do `tldts`, o download em paralelo, a prioridade na grade do celular e o favicon. Não feito, por ser proibido ou mudar o produto: adiar o worker ou abrir a primeira tela sem o mock, trocar as imagens e tirar seções do Início. Desktop fica em 98 nas duas páginas; Acessibilidade, Boas práticas e SEO ficam entre 96 e 100 em todas.
+Performance mobile (`/` 85 e `/nft/emerald-ape-042` 85 na mediana, commit `d97ad24`; eram 76 e 80 em `a9c14ff`, com `benchmarkIndex` 1551 contra 2226 agora, então parte da diferença é da máquina) fica abaixo de 90. LCP simulado de 3,7 s: a imagem só pode ser pedida depois do worker ativo, das duas respostas da API (com a latência de 40 a 120 ms do `default`) e do render com os dados, uma tarefa de cerca de 70 ms sem throttling que vira quase 280 ms sob 4x de CPU. O `bootup-time` aponta o chunk do app (508 ms), trabalho não atribuído (499 ms) e o mock (244 ms). Tentado e descartado por não mudar a nota: baixar o código da rota durante o boot do worker (os chunks saíam só 17 ms antes) e zod com `jitless` (30 ms a menos de CPU, nota igual). Um experimento com todo o `node_modules` num chunk deu 92, mas quebrava o boot: o LCP medido era a mensagem de falha. Não feito, por ser proibido ou mudar o produto: adiar o worker ou abrir a primeira tela sem o mock, trocar as imagens e tirar seções do Início. Desktop fica em 99 nas duas páginas; Acessibilidade, Boas práticas e SEO ficam entre 96 e 100 em todas.

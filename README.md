@@ -166,16 +166,16 @@ npm run lighthouse -- --url https://desafio-rosy-kappa.vercel.app
 
 O script (`scripts/lighthouse.mjs`, configuração em `lighthouse.config.mjs`) faz o build, sobe o `vite preview` na porta 4173, abre o Chrome headless com `chrome-launcher` e audita `/` e `/nft/emerald-ape-042` três vezes em cada perfil: `mobile` (configuração padrão do Lighthouse, com throttling simulado de 4x na CPU e 1,6 Mbps) e `desktop` (`desktopConfig`). Os 12 relatórios HTML e JSON e o `summary.md`/`summary.json` com as medianas, o ambiente e a seção "Abaixo da meta" ficam em `reports/lighthouse/`. O Chrome é o do Playwright; `CHROME_PATH` aponta outro. `--url` audita outra origem, mas o relatório versionado é o local. O reset de storage do Lighthouse fica ligado: cada execução é um primeiro acesso, com registro do Service Worker do MSW.
 
-Medianas do relatório versionado (Chrome 141 headless, 4 vCPU, `benchmarkIndex` 1598):
+Medianas do relatório versionado (commit `d97ad24`, Chrome 141 headless, 4 vCPU, `benchmarkIndex` 2226):
 
 | Página                 | Perfil  | Performance | Acessibilidade | Boas práticas | SEO | LCP    | CLS | TBT    |
 | ---------------------- | ------- | ----------- | -------------- | ------------- | --- | ------ | --- | ------ |
-| `/`                    | mobile  | 76          | 96             | 100           | 100 | 4,03 s | 0   | 392 ms |
-| `/`                    | desktop | 98          | 100            | 100           | 100 | 1,01 s | 0   | 51 ms  |
-| `/nft/emerald-ape-042` | mobile  | 80          | 100            | 100           | 100 | 4,08 s | 0   | 226 ms |
-| `/nft/emerald-ape-042` | desktop | 98          | 100            | 100           | 100 | 1,03 s | 0   | 5 ms   |
+| `/`                    | mobile  | 85          | 96             | 100           | 100 | 3,67 s | 0   | 177 ms |
+| `/`                    | desktop | 99          | 100            | 100           | 100 | 0,99 s | 0   | 8 ms   |
+| `/nft/emerald-ape-042` | mobile  | 85          | 100            | 100           | 100 | 3,70 s | 0   | 152 ms |
+| `/nft/emerald-ape-042` | desktop | 99          | 100            | 100           | 100 | 0,95 s | 0   | 13 ms  |
 
-Metas: Performance ≥ 90, Acessibilidade ≥ 95, Boas práticas ≥ 95 e SEO ≥ 90. Performance mobile fica abaixo: o MSW e o registro do Service Worker estão no caminho crítico e, sob 4x de CPU, a avaliação de script passa de 1 s. O JS baixado até a rede ficar ociosa em `/` é de 344 KB gzip (452 antes das otimizações de ARCHITECTURE §15; meta de 170 KB), contando o `socket.io-client` e o painel de cenários, que chegam depois da primeira pintura. Causas e o que foi tentado estão em `reports/lighthouse/summary.md` e em ARCHITECTURE §15.
+Metas: Performance ≥ 90, Acessibilidade ≥ 95, Boas práticas ≥ 95 e SEO ≥ 90. Performance mobile fica abaixo: o MSW e o registro do Service Worker estão no caminho crítico, e a imagem do LCP só é pedida depois do worker ativo, das respostas da API e do render com os dados. O boot baixa 299,6 KB gzip em 5 arquivos JS (meta de 170 KB); antes eram cerca de 25 chunks pequenos, e juntá-los levou a mediana mobile local de `/` de 81 para 84 na mesma máquina. Causas e o que foi tentado estão em `reports/lighthouse/summary.md` e em ARCHITECTURE §15.
 
 ## Rotas
 

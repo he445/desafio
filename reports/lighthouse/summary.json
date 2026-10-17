@@ -1,14 +1,14 @@
 {
   "environment": {
-    "date": "2026-10-16T22:40:11.587Z",
-    "commit": "a9c14ff",
+    "date": "2026-10-17T01:24:06.753Z",
+    "commit": "d97ad24",
     "url": "http://localhost:4173",
     "lighthouse": "13.5.0",
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36",
     "node": "v22.22.0",
     "os": "Linux 6.18.44-fc-v139 x64",
     "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz x4",
-    "benchmarkIndex": 1551
+    "benchmarkIndex": 2226
   },
   "targets": {
     "performance": 90,
@@ -23,15 +23,15 @@
       "path": "/",
       "profile": "mobile",
       "scores": {
-        "performance": 76,
+        "performance": 85,
         "accessibility": 96,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 4033.3974,
+        "LCP": 3667.7420999999995,
         "CLS": 0,
-        "TBT": 391.53229999999985
+        "TBT": 176.5
       },
       "throttling": "simulate, RTT 150 ms, 1638 Kbps, CPU 4x",
       "screen": "412x823 @1.75 mobile",
@@ -41,38 +41,38 @@
       "diagnostics": {
         "lcpElement": "a.block > div.relative > picture.contents > img.aspect-square",
         "lcpPhases": [
-          "timeToFirstByte 6 ms",
-          "resourceLoadDelay 552 ms",
-          "resourceLoadDuration 58 ms",
-          "elementRenderDelay 70 ms"
+          "timeToFirstByte 9 ms",
+          "resourceLoadDelay 362 ms",
+          "resourceLoadDuration 19 ms",
+          "elementRenderDelay 38 ms"
         ],
         "bootup": [
-          "/assets/browser-CP_a22N_.js 565 ms",
-          "Unattributable 543 ms",
-          "/assets/render-DHdU603R.js 522 ms"
+          "/assets/app-D0rTIB5T.js 508 ms",
+          "Unattributable 499 ms",
+          "/assets/mock-DE0GGg6C.js 244 ms"
         ],
         "unusedJs": [
-          "/assets/render-DHdU603R.js 41 KB",
-          "/assets/browser-CP_a22N_.js 39 KB"
+          "/assets/app-D0rTIB5T.js 99 KB",
+          "/assets/mock-DE0GGg6C.js 38 KB"
         ],
         "renderBlocking": []
       },
-      "medianRun": "home-mobile-2"
+      "medianRun": "home-mobile-1"
     },
     {
       "page": "home",
       "path": "/",
       "profile": "desktop",
       "scores": {
-        "performance": 98,
+        "performance": 99,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 1005.5254,
+        "LCP": 992.1053750000001,
         "CLS": 0,
-        "TBT": 50.668274999999994
+        "TBT": 8
       },
       "throttling": "simulate, RTT 40 ms, 10240 Kbps, CPU 1x",
       "screen": "1350x940 @1",
@@ -80,38 +80,38 @@
       "diagnostics": {
         "lcpElement": "div.min-w-0 > a.block > picture.contents > img.size-[450px]",
         "lcpPhases": [
-          "timeToFirstByte 5 ms",
-          "resourceLoadDelay 686 ms",
-          "resourceLoadDuration 74 ms",
-          "elementRenderDelay 80 ms"
+          "timeToFirstByte 4 ms",
+          "resourceLoadDelay 372 ms",
+          "resourceLoadDuration 58 ms",
+          "elementRenderDelay 68 ms"
         ],
         "bootup": [
-          "/assets/render-DHdU603R.js 187 ms",
-          "/assets/browser-CP_a22N_.js 184 ms",
-          "Unattributable 172 ms"
+          "/assets/app-D0rTIB5T.js 191 ms",
+          "Unattributable 118 ms",
+          "/assets/mock-DE0GGg6C.js 71 ms"
         ],
         "unusedJs": [
-          "/assets/browser-CP_a22N_.js 39 KB",
-          "/assets/render-DHdU603R.js 39 KB"
+          "/assets/app-D0rTIB5T.js 97 KB",
+          "/assets/mock-DE0GGg6C.js 41 KB"
         ],
         "renderBlocking": []
       },
-      "medianRun": "home-desktop-2"
+      "medianRun": "home-desktop-1"
     },
     {
       "page": "nft",
       "path": "/nft/emerald-ape-042",
       "profile": "mobile",
       "scores": {
-        "performance": 80,
+        "performance": 85,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 4079.1114000000002,
+        "LCP": 3698.4537,
         "CLS": 0,
-        "TBT": 225.99999999999977
+        "TBT": 152
       },
       "throttling": "simulate, RTT 150 ms, 1638 Kbps, CPU 4x",
       "screen": "412x823 @1.75 mobile",
@@ -121,19 +121,19 @@
       "diagnostics": {
         "lcpElement": "div.flex > div.min-w-0 > picture.contents > img.h-[356px]",
         "lcpPhases": [
-          "timeToFirstByte 7 ms",
-          "resourceLoadDelay 970 ms",
-          "resourceLoadDuration 25 ms",
-          "elementRenderDelay 24 ms"
+          "timeToFirstByte 4 ms",
+          "resourceLoadDelay 387 ms",
+          "resourceLoadDuration 24 ms",
+          "elementRenderDelay 19 ms"
         ],
         "bootup": [
-          "Unattributable 540 ms",
-          "/assets/browser-CP_a22N_.js 520 ms",
-          "/assets/render-DHdU603R.js 334 ms"
+          "Unattributable 397 ms",
+          "/assets/app-D0rTIB5T.js 382 ms",
+          "/assets/mock-DE0GGg6C.js 218 ms"
         ],
         "unusedJs": [
-          "/assets/render-DHdU603R.js 43 KB",
-          "/assets/browser-CP_a22N_.js 40 KB"
+          "/assets/app-D0rTIB5T.js 104 KB",
+          "/assets/mock-DE0GGg6C.js 42 KB"
         ],
         "renderBlocking": []
       },
@@ -144,15 +144,15 @@
       "path": "/nft/emerald-ape-042",
       "profile": "desktop",
       "scores": {
-        "performance": 98,
+        "performance": 99,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 1028.8648000000003,
+        "LCP": 950.0417999999999,
         "CLS": 0,
-        "TBT": 4.5
+        "TBT": 13.000000000000057
       },
       "throttling": "simulate, RTT 40 ms, 10240 Kbps, CPU 1x",
       "screen": "1350x940 @1",
@@ -160,19 +160,19 @@
       "diagnostics": {
         "lcpElement": "div.flex > div.relative > picture.contents > img.size-full",
         "lcpPhases": [
-          "timeToFirstByte 5 ms",
-          "resourceLoadDelay 969 ms",
-          "resourceLoadDuration 42 ms",
-          "elementRenderDelay 73 ms"
+          "timeToFirstByte 4 ms",
+          "resourceLoadDelay 408 ms",
+          "resourceLoadDuration 31 ms",
+          "elementRenderDelay 51 ms"
         ],
         "bootup": [
-          "Unattributable 183 ms",
-          "/assets/browser-CP_a22N_.js 153 ms",
-          "/assets/skeleton-oFSK6jVP.js 112 ms"
+          "/assets/app-D0rTIB5T.js 135 ms",
+          "Unattributable 104 ms",
+          "/assets/mock-DE0GGg6C.js 66 ms"
         ],
         "unusedJs": [
-          "/assets/render-DHdU603R.js 39 KB",
-          "/assets/browser-CP_a22N_.js 39 KB"
+          "/assets/app-D0rTIB5T.js 97 KB",
+          "/assets/mock-DE0GGg6C.js 41 KB"
         ],
         "renderBlocking": []
       },
