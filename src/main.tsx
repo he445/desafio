@@ -20,7 +20,8 @@ function showBootFailure(root: HTMLElement) {
 
 async function boot(root: HTMLElement) {
   // The app chunk downloads while the worker starts. Evaluating it early is safe because
-  // socket.io-client, which captures globalThis.WebSocket, is only imported after the first paint.
+  // socket.io-client, which captures globalThis.WebSocket, is only imported once the first screen
+  // has settled, long after the worker started.
   const app = import('./app/render')
   if (import.meta.env.VITE_API_MOCKING === 'enabled') {
     const { startMocks } = await import('./mocks/browser')

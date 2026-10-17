@@ -23,6 +23,7 @@ import { useSignOut } from '@/features/auth/hooks/use-sign-out'
 import { sessionQueryOptions, useSessionQuery } from '@/features/auth/queries'
 import { useCartItemCount } from '@/features/cart/queries'
 import { RealtimeConnection } from '@/features/realtime/components/realtime-connection'
+import { useFirstScreenSettled } from '@/lib/use-first-screen-settled'
 import { useIsDesktop } from '@/lib/use-media-query'
 import { cn } from '@/lib/utils'
 
@@ -41,6 +42,7 @@ function RootLayout() {
   const { data: session } = useSessionQuery()
   const cartCount = useCartItemCount()
   const signOut = useSignOut()
+  const firstScreenSettled = useFirstScreenSettled()
   useSessionSync()
 
   const showFooter = isDesktop || location.pathname === '/'
@@ -82,9 +84,9 @@ function RootLayout() {
         {showTabBar && <MobileTabBar cartCount={cartCount} />}
       </div>
       <Announcer />
-      <RealtimeConnection />
+      {firstScreenSettled && <RealtimeConnection />}
       <Toaster />
-      {showScenarioPanel && (
+      {firstScreenSettled && showScenarioPanel && (
         <Suspense fallback={null}>
           <ScenarioPanel />
         </Suspense>
