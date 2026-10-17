@@ -64,7 +64,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
-      tldts: fileURLToPath(new URL('./src/mocks/tldts-shim.ts', import.meta.url)),
+      'tough-cookie': fileURLToPath(new URL('./src/mocks/tough-cookie-shim.ts', import.meta.url)),
     },
   },
 })
