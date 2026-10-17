@@ -267,8 +267,6 @@ export const copy = {
     shareEmail: 'Compartilhar por e-mail',
     shareX: 'Compartilhar no X',
     newTab: '(abre em nova aba)',
-    relatedPrevious: 'NFTs anteriores',
-    relatedNext: 'Próximos NFTs',
   },
   favorites: {
     add: (title: string) => `Favoritar ${title}`,
@@ -368,7 +366,6 @@ export const copy = {
     ensSuffix: '.eth',
     noWallet: 'Você ainda não tem carteira',
     addWallet: 'Adicionar carteira',
-    walletsLabel: 'Carteiras salvas',
     walletMenu: (label: string) => `Opções da carteira ${label}`,
     totalMobile: 'Total:',
     loading: 'Carregando pagamento…',
@@ -455,7 +452,6 @@ export const copy = {
     processing: 'Processando…',
     formErrorTitle: 'Não foi possível entrar',
     registerErrorTitle: 'Não foi possível criar a conta',
-    reviewFields: 'Revise os campos destacados.',
     cartAdjusted: (title: string, quantity: number) =>
       quantity === 0
         ? `${title} saiu do carrinho: a edição esgotou.`
@@ -488,7 +484,6 @@ export const copy = {
     secondaryWallet: 'Carteira secundária',
     sameAsPrimary: 'Igual à carteira principal',
     noSecondaryWallet: 'Você ainda não adicionou uma carteira secundária.',
-    emptyFavorites: 'Você ainda não favoritou nenhum NFT.',
     avatarAlt: 'Seu avatar',
     avatarTypeError: 'Formato não suportado. Use PNG, JPEG ou WebP.',
     avatarSizeError: 'A imagem deve ter no máximo 2 MB.',
