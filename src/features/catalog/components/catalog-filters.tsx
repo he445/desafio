@@ -37,8 +37,8 @@ function FiltersSkeleton() {
   )
 }
 
-// The sidebar of the desktop catalog. Categories and networks are links, so every filter has
-// an address; the price is applied with its button.
+// Categories and networks are links, so every filter has an address; the price is applied
+// with its button.
 export function CatalogFilters() {
   const search = useCatalogSearch()
   const navigate = useCatalogNavigate()

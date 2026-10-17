@@ -13,8 +13,8 @@ interface FeaturedSlideProps {
   imageClassName: string
 }
 
-// One picture of the home carousel. A slide that is not showing stays out of the reading and
-// tab order, and only the first picture of the page is loaded with priority.
+// A slide that is not showing stays out of the reading and tab order, and only the first
+// picture of the page is loaded with priority.
 export function FeaturedSlide({
   nft,
   position,

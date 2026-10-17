@@ -3,8 +3,8 @@ import { expect, type Page } from '@playwright/test'
 
 const WCAG_TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']
 
-// The checklist asks for zero serious or critical violations; moderate and minor ones do not
-// fail the test. `include` narrows the scan to an open popup whose background is aria-hidden on purpose.
+// Serious and critical violations fail the test; moderate and minor ones do not. `include`
+// narrows the scan to an open popup whose background is aria-hidden on purpose.
 export async function expectNoSeriousViolations(page: Page, include?: string): Promise<void> {
   const builder = new AxeBuilder({ page }).withTags(WCAG_TAGS)
   if (include) builder.include(include)

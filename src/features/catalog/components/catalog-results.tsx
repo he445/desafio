@@ -8,7 +8,6 @@ import { CatalogPagination } from './catalog-pagination'
 import { CatalogSkeleton } from './catalog-skeleton'
 import { NftGrid } from './nft-grid'
 
-// The grid, with the four states every list has: loading, refreshing, empty and failed.
 export function CatalogResults() {
   const search = useCatalogSearch()
   const navigate = useCatalogNavigate()

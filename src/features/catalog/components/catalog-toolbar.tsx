@@ -4,7 +4,6 @@ import { useCatalogNavigate, useCatalogSearch } from '../hooks/use-catalog-searc
 import { CatalogTabs } from './catalog-tabs'
 import { SortSelect } from './sort-select'
 
-// Desktop bar above the grid: the tabs on the left, the ordering on the right.
 export function CatalogToolbar() {
   const search = useCatalogSearch()
   const navigate = useCatalogNavigate()

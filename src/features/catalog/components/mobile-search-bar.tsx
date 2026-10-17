@@ -6,7 +6,7 @@ import { useCatalogNavigate, useCatalogSearch } from '../hooks/use-catalog-searc
 import { useSearchBox } from '../hooks/use-search-box'
 import { FiltersSheet } from './filters-sheet'
 
-// The search field of the phone layout. The tab bar's central button focuses it by its id.
+// The tab bar's central button focuses this field by its id.
 export function MobileSearchBar() {
   const search = useCatalogSearch()
   const navigate = useCatalogNavigate()

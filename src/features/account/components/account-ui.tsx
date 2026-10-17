@@ -5,7 +5,7 @@ import { isApiError } from '@/lib/api-error'
 import { cn } from '@/lib/utils'
 
 // Profile and wallets have no mobile frame: one column, taller inputs and a full-width CTA
-// below lg (A.7), the Figma grid of 417 + 28 from lg up.
+// below lg, the Figma grid of 417 + 28 from lg up.
 export const accountGridClass = 'grid gap-6 lg:grid-cols-[repeat(2,minmax(0,417px))] lg:gap-x-7'
 export const accountInputClass = 'h-[50px] rounded-mobile-field lg:h-10 lg:rounded-field'
 export const accountSaveClass =
