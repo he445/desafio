@@ -67,10 +67,14 @@ test('quantities change through the server and a stock conflict is handled', asy
   await expect(cart.quantityOf(line)).toHaveText('2')
   await expect(cart.summaryValue('Subtotal')).toHaveText('2.38 ETH')
 
-  // Someone else bought most of the stock; this page has not refetched the cart yet.
+  // Someone else bought most of the stock. The stock event makes the page refetch the cart and
+  // disable "+"; holding that refetch keeps the page stale, so the server's 409 is what refuses
+  // the third unit.
+  const gate = await mock.hold({ method: 'GET', path: '/cart' })
   await mock.changeEdition({ ...FIFTY, available: 2 })
   await increase.click()
   await expect(page.getByText('Limite disponível para esta edição: 2.')).toBeVisible()
+  await mock.release(gate)
   await expect(cart.quantityOf(line)).toHaveText('2')
   await expect(increase).toBeDisabled()
 })
