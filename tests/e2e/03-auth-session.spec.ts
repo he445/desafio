@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test'
+import type { Page, Request } from '@playwright/test'
 import { expect, gotoReady, loginAs, PASSWORD, test, USERS } from '../support/fixtures'
 import { EMERALD, NftDetailPage } from '../support/nft-detail'
 
@@ -63,22 +63,34 @@ test('a private route sends a visitor to the login and back', async ({ page }) =
   await expect(page).toHaveURL('/checkout')
 })
 
-// The detail page loads the favorites in the background. Expiring the session before that answer
-// arrives turns it into the 401, and the click would land on a page already leaving for the login.
-function waitForFavorites(page: Page) {
-  return page.waitForResponse(
-    (response) => new URL(response.url()).pathname === '/api/v1/me/favorites',
-  )
+// The detail page asks for the favorites and the cart as soon as it renders. Expiring the session
+// while one of them still waits for its answer turns it, not the click, into the 401, and the page
+// leaves for the login before the click. A response wait set before the navigation can also be met
+// by the page being left, so the test waits until no API request has been open for half a second.
+function trackApi(page: Page): () => Promise<void> {
+  const open = new Set<Request>()
+  let lastChange = Date.now()
+  page.on('request', (request) => {
+    if (!new URL(request.url()).pathname.startsWith('/api/v1/')) return
+    open.add(request)
+    lastChange = Date.now()
+  })
+  const settle = (request: Request) => {
+    if (open.delete(request)) lastChange = Date.now()
+  }
+  page.on('requestfinished', settle)
+  page.on('requestfailed', settle)
+  return () => expect.poll(() => open.size === 0 && Date.now() - lastChange > 500).toBe(true)
 }
 
 test.describe('session expiry', () => {
   test('the same person signs in again and lands where they were', async ({ page, mock }) => {
     const detail = new NftDetailPage(page)
+    const apiSettled = trackApi(page)
     await loginAs(page, 'rafael')
     const path = `/nft/${EMERALD.id}?edition=${EMERALD.editions.fifty}`
-    const favoritesLoaded = waitForFavorites(page)
     await detail.open(path)
-    await favoritesLoaded
+    await apiSettled()
 
     await mock.expireSession()
     await detail.favorite.click()
@@ -92,10 +104,10 @@ test.describe('session expiry', () => {
 
   test('someone else signing in does not land on the previous page', async ({ page, mock }) => {
     const detail = new NftDetailPage(page)
+    const apiSettled = trackApi(page)
     await loginAs(page, 'marina')
-    const favoritesLoaded = waitForFavorites(page)
     await detail.open()
-    await favoritesLoaded
+    await apiSettled()
 
     await mock.expireSession()
     await detail.favorite.click()
