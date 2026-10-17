@@ -80,6 +80,10 @@ function trackApi(page: Page): () => Promise<void> {
   }
   page.on('requestfinished', settle)
   page.on('requestfailed', settle)
+  // Requests the previous document abandoned on navigation may never report an end.
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) open.clear()
+  })
   return () => expect.poll(() => open.size === 0 && Date.now() - lastChange > 500).toBe(true)
 }
 
