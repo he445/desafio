@@ -1,14 +1,14 @@
 {
   "environment": {
-    "date": "2026-10-17T01:24:06.753Z",
-    "commit": "d97ad24",
+    "date": "2026-10-17T03:00:11.100Z",
+    "commit": "d8627a0",
     "url": "http://localhost:4173",
     "lighthouse": "13.5.0",
     "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36",
     "node": "v22.22.0",
     "os": "Linux 6.18.44-fc-v139 x64",
     "cpu": "Intel(R) Xeon(R) Processor @ 2.80GHz x4",
-    "benchmarkIndex": 2226
+    "benchmarkIndex": 2152
   },
   "targets": {
     "performance": 90,
@@ -23,37 +23,35 @@
       "path": "/",
       "profile": "mobile",
       "scores": {
-        "performance": 85,
+        "performance": 91,
         "accessibility": 96,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 3667.7420999999995,
+        "LCP": 3065.2234000000003,
         "CLS": 0,
-        "TBT": 176.5
+        "TBT": 136.11969999999997
       },
       "throttling": "simulate, RTT 150 ms, 1638 Kbps, CPU 4x",
       "screen": "412x823 @1.75 mobile",
-      "below": [
-        "performance"
-      ],
+      "below": [],
       "diagnostics": {
         "lcpElement": "a.block > div.relative > picture.contents > img.aspect-square",
         "lcpPhases": [
-          "timeToFirstByte 9 ms",
-          "resourceLoadDelay 362 ms",
+          "timeToFirstByte 7 ms",
+          "resourceLoadDelay 352 ms",
           "resourceLoadDuration 19 ms",
-          "elementRenderDelay 38 ms"
+          "elementRenderDelay 57 ms"
         ],
         "bootup": [
-          "/assets/app-D0rTIB5T.js 508 ms",
-          "Unattributable 499 ms",
-          "/assets/mock-DE0GGg6C.js 244 ms"
+          "/assets/app-CAbWdQBw.js 516 ms",
+          "Unattributable 506 ms",
+          "/assets/mock-CfTUfQT5.js 229 ms"
         ],
         "unusedJs": [
-          "/assets/app-D0rTIB5T.js 99 KB",
-          "/assets/mock-DE0GGg6C.js 38 KB"
+          "/assets/app-CAbWdQBw.js 99 KB",
+          "/assets/mock-CfTUfQT5.js 33 KB"
         ],
         "renderBlocking": []
       },
@@ -64,15 +62,15 @@
       "path": "/",
       "profile": "desktop",
       "scores": {
-        "performance": 99,
+        "performance": 100,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 992.1053750000001,
+        "LCP": 754.1960250000001,
         "CLS": 0,
-        "TBT": 8
+        "TBT": 0
       },
       "throttling": "simulate, RTT 40 ms, 10240 Kbps, CPU 1x",
       "screen": "1350x940 @1",
@@ -80,19 +78,19 @@
       "diagnostics": {
         "lcpElement": "div.min-w-0 > a.block > picture.contents > img.size-[450px]",
         "lcpPhases": [
-          "timeToFirstByte 4 ms",
-          "resourceLoadDelay 372 ms",
-          "resourceLoadDuration 58 ms",
-          "elementRenderDelay 68 ms"
+          "timeToFirstByte 7 ms",
+          "resourceLoadDelay 351 ms",
+          "resourceLoadDuration 17 ms",
+          "elementRenderDelay 84 ms"
         ],
         "bootup": [
-          "/assets/app-D0rTIB5T.js 191 ms",
-          "Unattributable 118 ms",
-          "/assets/mock-DE0GGg6C.js 71 ms"
+          "/assets/app-CAbWdQBw.js 166 ms",
+          "Unattributable 107 ms",
+          "/assets/mock-CfTUfQT5.js 62 ms"
         ],
         "unusedJs": [
-          "/assets/app-D0rTIB5T.js 97 KB",
-          "/assets/mock-DE0GGg6C.js 41 KB"
+          "/assets/app-CAbWdQBw.js 97 KB",
+          "/assets/mock-CfTUfQT5.js 36 KB"
         ],
         "renderBlocking": []
       },
@@ -103,37 +101,35 @@
       "path": "/nft/emerald-ape-042",
       "profile": "mobile",
       "scores": {
-        "performance": 85,
+        "performance": 92,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 3698.4537,
+        "LCP": 3097.1676,
         "CLS": 0,
-        "TBT": 152
+        "TBT": 82.5
       },
       "throttling": "simulate, RTT 150 ms, 1638 Kbps, CPU 4x",
       "screen": "412x823 @1.75 mobile",
-      "below": [
-        "performance"
-      ],
+      "below": [],
       "diagnostics": {
         "lcpElement": "div.flex > div.min-w-0 > picture.contents > img.h-[356px]",
         "lcpPhases": [
-          "timeToFirstByte 4 ms",
-          "resourceLoadDelay 387 ms",
-          "resourceLoadDuration 24 ms",
-          "elementRenderDelay 19 ms"
+          "timeToFirstByte 5 ms",
+          "resourceLoadDelay 346 ms",
+          "resourceLoadDuration 38 ms",
+          "elementRenderDelay 21 ms"
         ],
         "bootup": [
-          "Unattributable 397 ms",
-          "/assets/app-D0rTIB5T.js 382 ms",
-          "/assets/mock-DE0GGg6C.js 218 ms"
+          "Unattributable 427 ms",
+          "/assets/app-CAbWdQBw.js 319 ms",
+          "/assets/mock-CfTUfQT5.js 216 ms"
         ],
         "unusedJs": [
-          "/assets/app-D0rTIB5T.js 104 KB",
-          "/assets/mock-DE0GGg6C.js 42 KB"
+          "/assets/app-CAbWdQBw.js 105 KB",
+          "/assets/mock-CfTUfQT5.js 37 KB"
         ],
         "renderBlocking": []
       },
@@ -144,15 +140,15 @@
       "path": "/nft/emerald-ape-042",
       "profile": "desktop",
       "scores": {
-        "performance": 99,
+        "performance": 100,
         "accessibility": 100,
         "best-practices": 100,
         "seo": 100
       },
       "values": {
-        "LCP": 950.0417999999999,
+        "LCP": 695.4766,
         "CLS": 0,
-        "TBT": 13.000000000000057
+        "TBT": 0
       },
       "throttling": "simulate, RTT 40 ms, 10240 Kbps, CPU 1x",
       "screen": "1350x940 @1",
@@ -161,18 +157,18 @@
         "lcpElement": "div.flex > div.relative > picture.contents > img.size-full",
         "lcpPhases": [
           "timeToFirstByte 4 ms",
-          "resourceLoadDelay 408 ms",
-          "resourceLoadDuration 31 ms",
-          "elementRenderDelay 51 ms"
+          "resourceLoadDelay 332 ms",
+          "resourceLoadDuration 18 ms",
+          "elementRenderDelay 76 ms"
         ],
         "bootup": [
-          "/assets/app-D0rTIB5T.js 135 ms",
-          "Unattributable 104 ms",
-          "/assets/mock-DE0GGg6C.js 66 ms"
+          "/assets/app-CAbWdQBw.js 130 ms",
+          "Unattributable 106 ms",
+          "/assets/mock-CfTUfQT5.js 59 ms"
         ],
         "unusedJs": [
-          "/assets/app-D0rTIB5T.js 97 KB",
-          "/assets/mock-DE0GGg6C.js 41 KB"
+          "/assets/app-CAbWdQBw.js 97 KB",
+          "/assets/mock-CfTUfQT5.js 36 KB"
         ],
         "renderBlocking": []
       },
